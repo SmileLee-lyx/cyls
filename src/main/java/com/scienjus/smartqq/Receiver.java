@@ -3,6 +3,7 @@ package com.scienjus.smartqq;
 import com.scienjus.smartqq.callback.*;
 import com.scienjus.smartqq.client.*;
 import com.scienjus.smartqq.model.*;
+import org.jetbrains.annotations.*;
 
 import java.text.*;
 import java.util.*;
@@ -35,36 +36,36 @@ public class Receiver {
     private static SmartQQClient client = new SmartQQClient(new MessageCallback() {
 
         @Override
-        public void onMessage(Message msg) {
+        public void onMessage(@NotNull Message message) {
             if (!receivingMessage) {
                 return;
             }
             try {
-                System.out.println("[" + getTime() + "] [私聊] " + getFriendNick(msg) + "：" + msg.getContent());
+                System.out.println("[" + getTime() + "] [私聊] " + getFriendNick(message) + "：" + message.getContent());
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
 
         @Override
-        public void onGroupMessage(GroupMessage msg) {
+        public void onGroupMessage(@NotNull GroupMessage message) {
             if (!receivingMessage) {
                 return;
             }
             try {
-                System.out.println("[" + getTime() + "] [" + getGroupName(msg) + "] " + getGroupUserNick(msg) + "：" + msg.getContent());
+                System.out.println("[" + getTime() + "] [" + getGroupName(message) + "] " + getGroupUserNick(message) + "：" + message.getContent());
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
 
         @Override
-        public void onDiscussMessage(DiscussMessage msg) {
+        public void onDiscussMessage(@NotNull DiscussMessage message) {
             if (!receivingMessage) {
                 return;
             }
             try {
-                System.out.println("[" + getTime() + "] [" + getDiscussName(msg) + "] " + getDiscussUserNick(msg) + "：" + msg.getContent());
+                System.out.println("[" + getTime() + "] [" + getDiscussName(message) + "] " + getDiscussUserNick(message) + "：" + message.getContent());
             } catch (Exception e) {
                 e.printStackTrace();
             }
