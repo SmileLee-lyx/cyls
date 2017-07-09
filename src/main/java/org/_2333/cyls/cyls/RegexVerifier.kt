@@ -1,4 +1,4 @@
-package org._2333.cyls
+package org._2333.cyls.cyls
 
 import org.intellij.lang.annotations.*
 

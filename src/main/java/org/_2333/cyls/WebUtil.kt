@@ -1,4 +1,4 @@
-package com.scienjus.smartqq
+package org._2333.cyls
 
 import java.io.*
 import java.net.*

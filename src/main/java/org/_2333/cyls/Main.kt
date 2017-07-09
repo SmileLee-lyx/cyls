@@ -1,107 +1,21 @@
 package org._2333.cyls
 
 import com.alibaba.fastjson.*
-import com.scienjus.smartqq.*
 import com.scienjus.smartqq.callback.*
 import com.scienjus.smartqq.client.*
 import com.scienjus.smartqq.model.*
-import org._2333.cyls.Main.Util.time
-import org._2333.cyls.RegexVerifier.*
+import org._2333.cyls.cyls.RegexVerifier.*
+import org._2333.cyls.Util.time
+import org._2333.cyls.cyls.*
 import org.ansj.splitWord.analysis.*
 import sun.dc.path.*
 import java.io.*
 import java.lang.Thread.*
-import java.text.*
-import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 
 /**
  * @author 2333
  */
 object Main {
-    private object Util {
-        /**
-         * 获取本地系统时间
-
-         * @return 本地系统时间
-         */
-        val time: String
-            get() {
-                val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-                return time.format(Date())
-            }
-
-        class Order(val path: ArrayList<String>, val message: String)
-
-        /**
-         * 将指令转为路径
-         */
-        fun readOrder(string: String): Order {
-            var str = string
-            val path = ArrayList<String>()
-            while (true) {
-                val dotIndex = str.indexOf('.')
-                val blankIndex = str.indexOf(' ')
-                if (blankIndex == -1 && dotIndex == -1) {
-                    path.add(str)
-                    return Order(path, "")
-                } else if (blankIndex == -1 || (dotIndex < blankIndex && dotIndex != -1)) {
-                    path.add(str.substring(0, dotIndex))
-                    str = str.substring(dotIndex + 1)
-                } else {
-                    path.add(str.substring(0, blankIndex))
-                    return Order(path, str.substring(blankIndex + 1))
-                }
-            }
-        }
-
-        /**
-         * @param cityName 查询的城市名
-         * @param d        0=今天 1=明天 2=后天
-         */
-        @Throws(InterruptedException::class)
-        fun getWeather(cityName: String, d: Int): String {
-            val actualCityName = cityName.replace("[ 　\t\n]".toRegex(), "")
-            if (actualCityName == "") {
-                return "请输入城市名称进行查询哦|•ω•`)"
-            } else {
-                val days = arrayOf("今天", "明天", "后天")
-                var msg = "云裂天气查询服务|•ω•`)\n"
-                msg = msg + "下面查询" + actualCityName + days[d] + "的天气:\n"
-                val web = "https://free-api.heweather.com/v5/forecast?city=$actualCityName&key=$weatherKey"
-                val result = WebUtil.request(web, null, "GET")
-                if (result == null) {
-                    return msg + "啊呀，真抱歉，查询失败的说，请确认这个地名是国内的城市名……|•ω•`)"
-                } else {
-                    val weather = JSON.parseObject(result)
-                    val something = weather.getJSONArray("HeWeather5")
-                    val anotherThing = something.getJSONObject(0)
-                    val basic = anotherThing.getJSONObject("basic")
-                    if (basic == null) {
-                        return msg + "啊呀，真抱歉，查询失败的说，请确认这个地名是国内的城市名……|•ω•`)"
-                    } else {
-                        val forecast = anotherThing.getJSONArray("daily_forecast")
-                        val day = forecast.getJSONObject(d)
-                        val cond = day.getJSONObject("cond")
-                        if (cond.getString("txt_d") == cond.getString("txt_n")) {
-                            msg += "全天${cond.getString("txt_d")},"
-                        } else {
-                            msg += "白天${cond.getString("txt_d")}，夜晚${cond.getString("txt_n")}，"
-                        }
-                        val tmp = day.getJSONObject("tmp")
-                        msg += "最高温与最低温为${tmp.getString("max")}℃和${tmp.getString("min")}℃，\n"
-                        val wind = day.getJSONObject("wind")
-                        msg += "${wind.getString("dir")}${wind.getString("sc")}级|•ω•`)"
-                        return msg
-                    }
-                }
-            }
-        }
-    }
-
-    private val weatherKey = "3511aebb46e04a59b77da9b1c648c398"               //天气查询密钥
 
     private var friendList: List<Friend> = ArrayList()                        //好友列表
     private var groupList: List<Group> = ArrayList()                          //群列表
@@ -164,7 +78,7 @@ object Main {
                     if (!(cylsGroup?.isPaused ?: throw RuntimeException())
                             && !ignored.contains(msg.userId) && !cylsGroup.hot
                             && getGroupUserNick(msg) != "系统消息") {
-                        cylsGroup?.addMessage()
+                        cylsGroup.addMessage()
                         if (friendFromID[msg.userId]?.markname == "79") {
                             reply(msg.content)
                         } else {
@@ -333,10 +247,12 @@ object Main {
             val nameBytes = ByteArray(nameLength)
             din.readFully(nameBytes)
             val name = String(nameBytes)
-            friendList.filter {
-                it.markname == name
-            }.forEach {
-                admin.add(it.userId)
+            if (name != "") {
+                friendList.filter {
+                    it.markname == name
+                }.forEach {
+                    admin.add(it.userId)
+                }
             }
         }
         din.close()
@@ -346,21 +262,19 @@ object Main {
      * 储存群信息等
      */
     private fun save() {
-        val file = File("savedFile.txt")
+        val mainObject = JSONObject()
+        val adminArray = JSONArray()
+        mainObject.put("admin", adminArray)
+        admin.forEach {
+            val friend = friendFromID[it]
+            val name = friend?.markname
+            if (name != null) adminArray.add(name)
+        }
+        val file = File("savedFileJSON.txt")
         if (file.exists()) file.delete()
         val fout = FileOutputStream(file)
-        val dout = DataOutputStream(fout)
-        dout.writeInt(admin.size)
-        admin.forEach {
-            try {
-                val name = friendFromID[it]?.markname ?: throw RuntimeException()
-                dout.writeInt(name.length)
-                dout.writeBytes(name)
-            } catch (e: RuntimeException) {
-                dout.writeInt(0)
-            }
-        }
-        dout.close()
+        fout.write(mainObject.toString().toByteArray())
+        fout.close()
     }
 
     /**
@@ -457,11 +371,8 @@ object Main {
      */
     private fun getGroupUserNick(msg: GroupMessage): String {
         getGroupInfoFromID(msg.groupId)
-        return try {
-            getGroupUserNick(groupUsersFromID[msg.groupId]?.get(msg.userId) ?: throw RuntimeException())
-        } catch (e: RuntimeException) {
-            return "系统消息" //若在群成员列表中查询不到，则为系统消息
-        }
+        val user = groupUsersFromID[msg.groupId]?.get(msg.userId)
+        return if (user != null) getGroupUserNick(user) else "系统消息"//若在群成员列表中查询不到，则为系统消息
         //TODO: 也有可能是新加群的用户或匿名用户
     }
 
@@ -664,7 +575,7 @@ object Main {
         for ((uid, user) in groupUsers) {
             if (getGroupUserNick(user).contains(it)) {
                 reply("$uid:${getGroupUserNick(user)}")
-                Thread.sleep(100)
+                sleep(100)
             }
         }
     }
