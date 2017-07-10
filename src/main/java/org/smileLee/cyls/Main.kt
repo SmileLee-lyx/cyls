@@ -5,6 +5,7 @@ import com.scienjus.smartqq.callback.*
 import com.scienjus.smartqq.client.*
 import com.scienjus.smartqq.model.*
 import org.ansj.splitWord.analysis.*
+import org.smileLee.cyls.Util.byChance
 import org.smileLee.cyls.Util.time
 import org.smileLee.cyls.cyls.*
 import org.smileLee.cyls.cyls.RegexVerifier.*
@@ -78,7 +79,9 @@ object Main {
                                 && getGroupUserNick(message.groupId, message.userId) != "系统消息") {
                             currentGroup.addMessage()
                             if (currentUser.markName == "79") {
-                                reply(message.content!!)
+                                byChance(0.3) {
+                                    reply(message.content!!)
+                                }
                             } else {
                                 regexVerifier.findAndRun(message.content!!)
                             }
@@ -213,7 +216,7 @@ object Main {
         }()
         if (currentUser.isOwner) {
             if (!destUser.isIgnored) destUser.ignoreLevel = CylsFriend.IgnoreLevel.IGNORED
-            reply("${getGroupUserNick(currentGroupId, uin)}已被屏蔽，然而这么做是不是 不太好…… |•ω•`)")
+            reply("${getGroupUserNick(currentGroupId, uin)}已被屏蔽，然而这么做是不是不太好…… |•ω•`)")
             save()
         } else if (currentUser.isAdmin && !destUser.isAdmin) {
             if (!destUser.isIgnored) destUser.ignoreLevel = CylsFriend.IgnoreLevel.IGNORED
@@ -473,8 +476,25 @@ cyls.sudo.check
                     reply("表白${getGroupUserNick(currentMessage.groupId, currentMessage.userId)}|•ω•`)")
                 else if (result.filter { it.realName == "表白" }.isNotEmpty()) reply("表白+1 |•ω•`)")
             },
+            RegexNode("(\\[\"face\",\\d+])*晚安(\\[\"face\",\\d+])*") {
+                val hasGreeted = currentGroup.hasGreeted
+                currentGroup.addGreeting()
+                if (!hasGreeted) reply("晚安，好梦|•ω•`)")
+            },
+            RegexNode("(\\[\"face\",\\d+])*早安?(\\[\"face\",\\d+])*") {
+                val hasGreeted = currentGroup.hasGreeted
+                currentGroup.addGreeting()
+                if (!hasGreeted) reply("早|•ω•`)")
+            },
             RegexNode(".*(有没有.*|有.{1,5}吗)") {
-                if (it.contains("钱|毒|迪兰特".toRegex())) reply("有（逃|•ω•`)") else reply("没有（逃|•ω•`)")
+                if (it.contains("钱|毒|迪兰特|大佬".toRegex()) !=
+                        it.contains("笑姐姐|lyx|李一笑|女王神教|飞天拉面神教".toRegex())) reply("有（逃|•ω•`)")
+                else reply("没有（逃|•ω•`)")
+            },
+            RegexNode(".*(是不是.*|是.{1,5}吗)") {
+                if (it.contains("钱|毒|迪兰特|大佬|退群".toRegex()) !=
+                        it.contains("笑姐姐|lyx|李一笑|女王神教|飞天拉面神教".toRegex())) reply("是（逃|•ω•`)")
+                else reply("不是（逃|•ω•`)")
             },
             RegexNode("(.*自检.*云裂.*)|(.*云裂.*自检.*)") {
                 reply("自检完毕\n一切正常哦|･ω･｀)")

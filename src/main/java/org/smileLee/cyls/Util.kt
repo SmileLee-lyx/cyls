@@ -83,4 +83,6 @@ object Util {
             }
         }
     }
+
+    inline fun byChance(chance: Double, action: () -> Unit) = if (Math.random() < chance) action() else Unit
 }

@@ -1,7 +1,6 @@
 package org.smileLee.cyls.cyls
 
 import com.alibaba.fastjson.annotation.*
-import com.alibaba.fastjson.serializer.*
 import com.scienjus.smartqq.model.*
 import org.smileLee.cyls.*
 import java.lang.Thread.*
@@ -37,13 +36,20 @@ class CylsGroup(
     }
 
     val messageCount get() = _messageCount
+    val hasGreeted get() = _greetingCount != 0
     val hot get() = messageCount > MAX_MESSAGE_COUNT
 
     @JSONField(serialize = false) private var _messageCount = 0
+    @JSONField(serialize = false) private var _greetingCount = 0
 
     fun addMessage() {
         ++_messageCount
         Thread(Runnable { sleep(5 * 60 * 1000); --_messageCount }).start()
+    }
+
+    fun addGreeting() {
+        ++_greetingCount
+        Thread(Runnable { sleep(5 * 60 * 1000); --_greetingCount }).start()
     }
 
     fun set(group: Group) {
