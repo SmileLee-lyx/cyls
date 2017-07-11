@@ -62,7 +62,7 @@ object Util {
             val days = arrayOf("今天", "明天", "后天")
             var msg = "云裂天气查询服务|•ω•`)\n"
             msg = msg + "下面查询" + actualCityName + days[d] + "的天气:\n"
-            val web = "https://free-api.heweather.com/v5/forecast?city=$actualCityName&key=${weatherKey}"
+            val web = "https://free-api.heweather.com/v5/forecast?city=$actualCityName&key=$weatherKey"
             val result = WebUtil.request(web, null, "GET")
             if (result == null) {
                 return msg + "啊呀，真抱歉，查询失败的说，请确认这个地名是国内的城市名……|•ω•`)"

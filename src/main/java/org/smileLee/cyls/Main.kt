@@ -207,6 +207,9 @@ object Main {
     val root = TreeNode("", null) {
     }
     val sudo = TreeNode("sudo", root) {
+        reply("""输入
+cyls.help.sudo
+查看帮助信息|•ω•`)""")
     }
     val sudoIgnore = TreeNode("ignore", sudo) {
         val uin = java.lang.Long.parseLong(it)
@@ -367,6 +370,9 @@ object Main {
         }
     }
     val util = TreeNode("util", root) {
+        reply("""输入
+cyls.help.util
+查看帮助信息|•ω•`)""")
     }
     val utilQuery = TreeNode("query", util) {
         reply("开始查找|•ω•`)")
@@ -472,6 +478,31 @@ cyls.sudo.check
 不如向主人申请权限吧|•ω•`)""")
         }
     }
+    val helpUtil = TreeNode("util", help) {
+        reply("""目前云裂的工具功能还不怎么完善呢|•ω•`)
+你可以查询群成员：
+cyls.util.query [群名片的一部分]
+你可以查询天气：
+cyls.util.weather
+可以进行简单的计算：
+cyls.util.cal [表达式/代码块]
+关于天气功能的更多内容，输入
+cyls.help.util.weather
+来查看哦|•ω•`)""")
+    }
+    val helpUtilWeather = TreeNode("weather", helpUtil) {
+        reply("""
+云裂的天气查询功能目前只能查到近几日的天气|•ω•`)
+[天数]: 0 -> 今天, 1 -> 明天, 2 -> 后天
+cyls.util.weather [城市名] [天数]
+cyls.util.weather.today [城市名]
+cyls.util.weather.tomorrow [城市名]
+cyls.util.weather.day[天数] [城市名]
+例如：
+cyls.util.weather.day2 无锡
+查询无锡后天的天气。
+""")
+    }
 
     val regexVerifier = RegexVerifier(arrayListOf(
             RegexNode(".*表白.*") {
@@ -517,7 +548,6 @@ cyls.sudo.check
         load()
 
         //为防止请求过多导致服务器启动自我保护
-        //群id到群详情映射 和 讨论组id到讨论组详情映射 将在第一次请求时创建
-        //TODO: 可考虑在出现第一条讨论组消息时再建立相关映射，以防Api错误返回
+        //群id到群详情映射 将在第一次请求时创建
     }
 }

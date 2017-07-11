@@ -9,7 +9,7 @@
 
     <name>smartqq</name>
     <url>http://maven.apache.org</url>
-    
+
     <!-- Properties -->
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -17,37 +17,31 @@
     </properties>
 
     <dependencies>
-
         <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>1.2.17</version>
         </dependency>
-
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
             <version>1.2.7</version>
         </dependency>
-
         <dependency>
             <groupId>net.dongliu</groupId>
             <artifactId>requests</artifactId>
             <version>2.1.5</version>
         </dependency>
-
         <dependency>
             <groupId>org.ansj</groupId>
             <artifactId>ansj_seg</artifactId>
             <version>5.1.1</version>
         </dependency>
-
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
             <version>1.10.2</version>
         </dependency>
-
         <dependency>
             <groupId>org.mathparser</groupId>
             <artifactId>mxparser</artifactId>
@@ -55,7 +49,6 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/src/main/resources/mxparser.jar</systemPath>
         </dependency>
-
         <dependency>
             <groupId>org.smileLee</groupId>
             <artifactId>kotlinTest</artifactId>
@@ -74,7 +67,6 @@
             <version>${kotlin.version}</version>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
