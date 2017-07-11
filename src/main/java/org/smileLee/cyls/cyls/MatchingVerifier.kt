@@ -2,7 +2,7 @@ package org.smileLee.cyls.cyls
 
 import org.intellij.lang.annotations.*
 
-class RegexVerifier(
+class MatchingVerifier(
         val regexNodes: ArrayList<RegexNode>
 ) {
     class RegexNode(

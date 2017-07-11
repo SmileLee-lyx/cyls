@@ -8,7 +8,7 @@ import org.ansj.splitWord.analysis.*
 import org.smileLee.cyls.Util.byChance
 import org.smileLee.cyls.Util.time
 import org.smileLee.cyls.cyls.*
-import org.smileLee.cyls.cyls.RegexVerifier.*
+import org.smileLee.cyls.cyls.MatchingVerifier.*
 import sun.dc.path.*
 import java.io.*
 import java.lang.Thread.*
@@ -504,7 +504,7 @@ cyls.util.weather.day2 无锡
 """)
     }
 
-    val regexVerifier = RegexVerifier(arrayListOf(
+    val regexVerifier = MatchingVerifier(arrayListOf(
             RegexNode(".*表白.*") {
                 val result = ToAnalysis.parse(it)
                 if (it.matches(".*表白云裂.*".toRegex()))
@@ -538,6 +538,13 @@ cyls.util.weather.day2 无锡
                 val result = ToAnalysis.parse(it)
                 if (result.filter { it.realName == "云裂" }.isNotEmpty())
                     reply("叫我做什么|•ω•`)")
+            },
+            RegexNode(".*(大新闻|知识水平|谈笑风生|太暴力了|暴力膜|高到不知道?那里去).*") {
+                byChance(0.5, {
+                    reply("不要整天搞个大新闻")
+                }, {
+                    reply("迪兰特比你们不知道高到哪里去了，我和他谈笑风生")
+                })
             }
     ))
 

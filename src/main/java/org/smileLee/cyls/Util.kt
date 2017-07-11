@@ -95,4 +95,7 @@ object Util {
     inline fun byChance(chance: Double, action: () -> Unit) {
         if (Math.random() < chance) action()
     }
+
+    inline fun <T> byChance(chance: Double, a: () -> T, b: () -> T)
+            = if (Math.random() < chance) a() else b()
 }
