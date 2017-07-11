@@ -19,6 +19,15 @@ object Util {
 
     class Order(val path: ArrayList<String>, val message: String)
 
+    fun String.firstIndexOf(vararg char: Char): Int {
+        var ret = length
+        fun check(x: Int) = if (x != -1) x else length
+        char.forEach {
+            ret = minOf(ret, check(indexOf(it)))
+        }
+        return ret
+    }
+
     /**
      * 将指令转为路径
      */
@@ -26,12 +35,12 @@ object Util {
         var str = string
         val path = ArrayList<String>()
         while (true) {
-            val dotIndex = str.indexOf('.')
-            val blankIndex = str.indexOf(' ')
-            if (blankIndex == -1 && dotIndex == -1) {
+            val dotIndex = str.firstIndexOf('.')
+            val blankIndex = str.firstIndexOf(' ', '\n')
+            if (blankIndex == dotIndex) {
                 path.add(str)
                 return Order(path, "")
-            } else if (blankIndex == -1 || (dotIndex < blankIndex && dotIndex != -1)) {
+            } else if (dotIndex < blankIndex) {
                 path.add(str.substring(0, dotIndex))
                 str = str.substring(dotIndex + 1)
             } else {
@@ -45,7 +54,6 @@ object Util {
      * @param cityName 查询的城市名
      * @param d        0=今天 1=明天 2=后天
      */
-    @Throws(InterruptedException::class)
     fun getWeather(cityName: String, d: Int): String {
         val actualCityName = cityName.replace("[ 　\t\n]".toRegex(), "")
         if (actualCityName == "") {
@@ -84,5 +92,7 @@ object Util {
         }
     }
 
-    inline fun byChance(chance: Double, action: () -> Unit) = if (Math.random() < chance) action() else Unit
+    inline fun byChance(chance: Double, action: () -> Unit) {
+        if (Math.random() < chance) action()
+    }
 }

@@ -427,6 +427,10 @@ object Main {
             reply(Util.getWeather(strs[0], 1))
         } else reply("请输入城市名|•ω•`)")
     }
+    val utilCal = TreeNode("cal", util) {
+        val expression = it.replace("&gt;", ">").replace("&lt;", "<")
+        reply("结果是：${currentGroup.calculate(expression)}")
+    }
     val help = TreeNode("help", root) {
     }
     val helpSudo = TreeNode("sudo", help) {

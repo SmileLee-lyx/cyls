@@ -13,7 +13,7 @@
     <!-- Properties -->
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.version>1.1.3</kotlin.version>
+        <kotlin.version>1.1.3-2</kotlin.version>
     </properties>
 
     <dependencies>
@@ -54,6 +54,14 @@
             <version>3.0.0</version>
             <scope>system</scope>
             <systemPath>${project.basedir}/src/main/resources/mxparser.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.smileLee</groupId>
+            <artifactId>kotlinTest</artifactId>
+            <version>0.2.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/src/main/resources/smilescript.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>

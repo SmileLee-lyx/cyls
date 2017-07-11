@@ -3,6 +3,8 @@ package org.smileLee.cyls.cyls
 import com.alibaba.fastjson.annotation.*
 import com.scienjus.smartqq.model.*
 import org.smileLee.cyls.*
+import org.smileLee.smilescript.expression.controlExpression.*
+import org.smileLee.smilescript.stack.*
 import java.lang.Thread.*
 
 @JSONType(ignores = arrayOf("hot"))
@@ -17,22 +19,14 @@ class CylsGroup(
     @JSONField(serialize = false) var group: Group? = null
     @JSONField(serialize = false) var groupInfo: GroupInfo? = null
     @JSONField(serialize = false) var _groupUsersFromId: HashMap<Long, GroupUser> = HashMap()
-    @JSONField(serialize = false) val groupUsersFromId = object : SafeMap<Long, GroupUser> {
-        override fun put(key: Long, value: GroupUser) = _groupUsersFromId.put(key, value)
-        override fun putAll(from: Map<Long, GroupUser>) = _groupUsersFromId.putAll(from)
-        override fun iterator() = _groupUsersFromId.iterator()
-        override fun get(key: Long): GroupUser {
-            val user = _groupUsersFromId[key]
-            if (user != null) return user else {
-                groupInfo?.users?.forEach {
-                    if (it.uin == key) {
-                        _groupUsersFromId.put(key, it)
-                        return it
-                    }
-                }
-                null!!
+    @JSONField(serialize = false) val groupUsersFromId = InitSafeMap(_groupUsersFromId) { key ->
+        groupInfo?.users?.forEach {
+            if (it.uin == key) {
+                _groupUsersFromId.put(key, it)
+                return@InitSafeMap it
             }
         }
+        null!!
     }
 
     val messageCount get() = _messageCount
@@ -56,4 +50,7 @@ class CylsGroup(
         name = group.name!!
         this.group = group
     }
+
+    @JSONField(serialize = false) val stack = Stack()
+    fun calculate(s: String) = Block.parse(s).invoke(stack).toString()
 }
