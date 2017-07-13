@@ -3,31 +3,33 @@ package com.scienjus.smartqq;
 import com.scienjus.smartqq.callback.*;
 import com.scienjus.smartqq.client.*;
 import com.scienjus.smartqq.model.*;
+import org.jetbrains.annotations.*;
 
 import java.io.*;
 import java.util.*;
 
 /**
  * @author ScienJus
- * @date 2015/12/18.
+ * 2015/12/18.
+ *
  */
-public class Application {
+class Application {
 
     public static void main(String[] args) {
         //创建一个新对象时需要扫描二维码登录，并且传一个处理接收到消息的回调，如果你不需要接收消息，可以传null
         SmartQQClient client = new SmartQQClient(new MessageCallback() {
             @Override
-            public void onMessage(Message message) {
+            public void onMessage(@NotNull Message message) {
                 System.out.println(message.getContent());
             }
 
             @Override
-            public void onGroupMessage(GroupMessage message) {
+            public void onGroupMessage(@NotNull GroupMessage message) {
                 System.out.println(message.getContent());
             }
 
             @Override
-            public void onDiscussMessage(DiscussMessage message) {
+            public void onDiscussMessage(@NotNull DiscussMessage message) {
                 System.out.println(message.getContent());
             }
         });

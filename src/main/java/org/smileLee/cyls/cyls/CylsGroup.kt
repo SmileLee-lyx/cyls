@@ -7,7 +7,7 @@ import org.smileLee.smilescript.expression.controlExpression.*
 import org.smileLee.smilescript.stack.*
 import java.lang.Thread.*
 
-@JSONType(ignores = arrayOf("hot"))
+@JSONType(ignores = arrayOf("hot", "hasGreeted"))
 class CylsGroup(
         var name: String = "",
         var isPaused: Boolean = false

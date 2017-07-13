@@ -1,7 +1,6 @@
 package org.smileLee.cyls.cyls
 
 import com.alibaba.fastjson.annotation.*
-import com.alibaba.fastjson.serializer.*
 import com.scienjus.smartqq.model.*
 import org.smileLee.cyls.cyls.CylsFriend.*
 
