@@ -22,62 +22,42 @@ import java.util.*
  * *
  * @date 2015/12/18.
  */
-class SmartQQClient(callback: MessageCallback?) : Closeable {
+class SmartQQClient @JvmOverloads constructor(
+        val callback: MessageCallback,
+        qrCodeFile: File = File("qrcode.png")
+) : Closeable {
 
     //客户端
-    private val client: Client?
+    private val client = Client.pooled().maxPerRoute(5).maxTotal(10).build()!!
 
     //会话
     private val session: Session
 
     //二维码令牌
-    private var qrsig: String? = null
+    private lateinit var qrsig: String
 
     //二维码窗口
     private val qrframe = QRCodeFrame()
 
     //鉴权参数
-    private var ptwebqq: String? = null
-    private var vfwebqq: String? = null
-    private var uin: Long = 0
-    private var psessionid: String? = null
+    private lateinit var ptwebqq: String
+    private lateinit var vfwebqq: String
+    private lateinit var psessionid: String
+    private var uin = 0L
 
     //线程开关
-    @Volatile private var pollStarted: Boolean = false
+    @Volatile private var pollStarted = false
 
     init {
-        this.client = Client.pooled().maxPerRoute(5).maxTotal(10).build()
-        this.session = client!!.session()
-        login()
-        if (callback != null) {
-            this.pollStarted = true
-            Thread(Runnable {
-                while (true) {
-                    if (!pollStarted) {
-                        return@Runnable
-                    }
-                    try {
-                        pollMessage(callback)
-                    } catch (e: RequestException) {
-                        //忽略SocketTimeoutException
-                        if (e.cause !is SocketTimeoutException) {
-                            LOGGER.error(e.message)
-                        }
-                    } catch (e: Exception) {
-                        LOGGER.error(e.message)
-                    }
-
-                }
-            }).start()
-        }
+        this.session = client.session()
+        login(qrCodeFile)
     }
 
     /**
      * 登录
      */
-    private fun login() {
-        getQRCode()
-        val url = verifyQRCode()
+    private fun login(qrCodeFile: File) {
+        val url = getAndVerifyQRCode(qrCodeFile)
         getPtwebqq(url)
         getVfwebqq()
         getUinAndPsessionid()
@@ -85,52 +65,76 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
         LOGGER.info(accountInfo.nick!! + "，欢迎！") //登录成功欢迎语
     }
 
-    //登录流程1：获取二维码
-    private fun getQRCode() {
-        LOGGER.debug("开始获取二维码")
-
-        //本地存储二维码图片
-        val filePath: String
-        try {
-            filePath = File("qrcode.png").canonicalPath
-        } catch (e: IOException) {
-            throw IllegalStateException("二维码保存失败")
-        }
-
-        val response = session.get(ApiURL.GET_QR_CODE.url)
-                .addHeader("User-Agent", ApiURL.USER_AGENT)
-                .file(filePath)
-        for (cookie in response.cookies) {
-            if (cookie.name == "qrsig") {
-                qrsig = cookie.value
-                break
+    val runner = Runnable {
+        while (true) {
+            if (!pollStarted) {
+                return@Runnable
+            }
+            try {
+                pollMessage(callback)
+            } catch (e: RequestException) {
+                //忽略SocketTimeoutException
+                if (e.cause !is SocketTimeoutException) {
+                    LOGGER.error(e.message)
+                }
+            } catch (e: Exception) {
+                LOGGER.error(e.message)
             }
         }
-        LOGGER.info("二维码已保存在 $filePath 文件中，请打开手机QQ并扫描二维码")
-        qrframe.showQRCode(filePath) //显示二维码
     }
 
-    //登录流程2：校验二维码
-    private fun verifyQRCode(): String {
-        LOGGER.debug("等待扫描二维码")
+    fun start() {
+        this.pollStarted = true
+        val pollThread = Thread(runner)
+        pollThread.start()
+    }
 
-        //阻塞直到确认二维码认证成功
-        while (true) {
-            sleep(1)
-            val response = get(ApiURL.VERIFY_QR_CODE, hash33(qrsig!!))
-            val result = response.body
-            if (result.contains("成功")) {
-                for (content in result.split("','".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()) {
-                    if (content.startsWith("http")) {
-                        LOGGER.info("正在登录，请稍后")
-                        qrframe.dispose() //认证成功后释放窗体资源
-                        return content
-                    }
+    //登录流程1：获取二维码
+    //登录流程2：验证二维码扫描
+    private fun getAndVerifyQRCode(qrCodeFile: File): String {
+        getAndVerify@ while (true) {
+            LOGGER.debug("开始获取二维码")
+
+            //本地存储二维码图片
+            val filePath: String
+            try {
+                filePath = qrCodeFile.canonicalPath
+            } catch (e: IOException) {
+                throw IllegalStateException("二维码保存失败")
+            }
+
+            val getQRCodeResponse = session.get(ApiURL.GET_QR_CODE.url)
+                    .addHeader("User-Agent", ApiURL.USER_AGENT)
+                    .file(filePath)
+            for (cookie in getQRCodeResponse.cookies) {
+                if (cookie.name == "qrsig") {
+                    qrsig = cookie.value
+                    break
                 }
-            } else if (result.contains("已失效")) {
-                LOGGER.info("二维码已失效，尝试重新获取二维码")
-                qrframe.waitForQRCode() //等待新的二维码
-                getQRCode()
+            }
+            LOGGER.info("二维码已保存在 $filePath 文件中，请打开手机QQ并扫描二维码")
+            qrframe.showQRCode(filePath) //显示二维码
+
+            LOGGER.debug("等待扫描二维码")
+
+            //阻塞直到确认二维码认证成功
+            verify@ while (true) {
+                sleep(1)
+                val verifyQRCodeResponse = get(ApiURL.VERIFY_QR_CODE, hash33(qrsig))
+                val result = verifyQRCodeResponse.body
+                if (result.contains("成功")) {
+                    for (content in result.split("','".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()) {
+                        if (content.startsWith("http")) {
+                            LOGGER.info("正在登录，请稍后")
+                            qrframe.dispose() //认证成功后释放窗体资源
+                            return content
+                        }
+                    }
+                } else if (result.contains("已失效")) {
+                    LOGGER.info("二维码已失效，尝试重新获取二维码")
+                    qrframe.waitForQRCode() //等待新的二维码
+                    continue@getAndVerify
+                }
             }
         }
     }
@@ -147,7 +151,7 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
     private fun getVfwebqq() {
         LOGGER.debug("开始获取vfwebqq")
 
-        val response = get(ApiURL.GET_VFWEBQQ, ptwebqq!!)
+        val response = get(ApiURL.GET_VFWEBQQ, ptwebqq)
         this.vfwebqq = getJsonObjectResult(response).getString("vfwebqq")
     }
 
@@ -202,7 +206,7 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
         val response = post(ApiURL.POLL_MESSAGE, r)
         val array = getJsonArrayResult(response)
         var i = 0
-        while (array != null && i < array.size) {
+        if (array != null) while (i < array.size) {
             val message = array.getJSONObject(i)
             val type = message.getString("poll_type")
             if ("message" == type) {
@@ -291,7 +295,7 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
         get() {
             LOGGER.debug("开始获取讨论组列表")
 
-            val response = get(ApiURL.GET_DISCUSS_LIST, psessionid!!, vfwebqq!!)
+            val response = get(ApiURL.GET_DISCUSS_LIST, psessionid, vfwebqq)
             return JSON.parseArray(getJsonObjectResult(response).getJSONArray("dnamelist").toJSONString(), Discuss::class.java)
         }
 
@@ -373,7 +377,7 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
     fun getFriendInfo(friendId: Long): UserInfo {
         LOGGER.debug("开始获取好友信息")
 
-        val response = get(ApiURL.GET_FRIEND_INFO, friendId, vfwebqq!!, psessionid!!)
+        val response = get(ApiURL.GET_FRIEND_INFO, friendId, vfwebqq, psessionid)
         return JSON.parseObject(getJsonObjectResult(response).toJSONString(), UserInfo::class.java)
     }
 
@@ -405,7 +409,7 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
     fun getQQById(friendId: Long): Long {
         LOGGER.debug("开始获取QQ号")
 
-        val response = get(ApiURL.GET_QQ_BY_ID, friendId, vfwebqq!!)
+        val response = get(ApiURL.GET_QQ_BY_ID, friendId, vfwebqq)
         return getJsonObjectResult(response).getLongValue("account")
     }
 
@@ -484,7 +488,7 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
         get() {
             LOGGER.debug("开始获取好友状态")
 
-            val response = get(ApiURL.GET_FRIEND_STATUS, vfwebqq!!, psessionid!!)
+            val response = get(ApiURL.GET_FRIEND_STATUS, vfwebqq, psessionid)
             return JSON.parseArray(getJsonArrayResult(response)!!.toJSONString(), FriendStatus::class.java)
         }
 
@@ -498,7 +502,7 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
     fun getGroupInfo(groupCode: Long): GroupInfo {
         LOGGER.debug("开始获取群资料")
 
-        val response = get(ApiURL.GET_GROUP_INFO, groupCode, vfwebqq!!)
+        val response = get(ApiURL.GET_GROUP_INFO, groupCode, vfwebqq)
         val result = getJsonObjectResult(response)
         val groupInfo = result.getObject("ginfo", GroupInfo::class.java)
         //获得群成员信息
@@ -537,8 +541,8 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
         var i = 0
         while (vipinfo != null && i < vipinfo.size) {
             val item = vipinfo.getJSONObject(i)
-            val groupUser = groupUserMap[item.getLongValue("u")]
-            groupUser!!.isVip = item.getIntValue("is_vip") == 1
+            val groupUser = groupUserMap[item.getLongValue("u")]!!
+            groupUser.isVip = item.getIntValue("is_vip") == 1
             groupUser.vipLevel = item.getIntValue("vip_level")
             i++
         }
@@ -555,7 +559,7 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
     fun getDiscussInfo(discussId: Long): DiscussInfo {
         LOGGER.debug("开始获取讨论组资料")
 
-        val response = get(ApiURL.GET_DISCUSS_INFO, discussId, vfwebqq!!, psessionid!!)
+        val response = get(ApiURL.GET_DISCUSS_INFO, discussId, vfwebqq, psessionid)
         val result = getJsonObjectResult(response)
         val discussInfo = result.getObject("info", DiscussInfo::class.java)
         //获得讨论组成员信息
@@ -574,8 +578,8 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
         var i = 0
         while (stats != null && i < stats.size) {
             val item = stats.getJSONObject(i)
-            val discussUser = discussUserMap[item.getLongValue("uin")]
-            discussUser!!.clientType = item.getIntValue("client_type")
+            val discussUser = discussUserMap[item.getLongValue("uin")]!!
+            discussUser.clientType = item.getIntValue("client_type")
             discussUser.status = item.getString("status")
             i++
         }
@@ -615,15 +619,13 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
 
     //hash加密方法
     private fun hash(): String {
-        return hash(uin, ptwebqq!!)
+        return hash(uin, ptwebqq)
     }
 
     @Throws(IOException::class)
     override fun close() {
         this.pollStarted = false
-        if (this.client != null) {
-            this.client.close()
-        }
+        this.client.close()
     }
 
     companion object {
@@ -680,8 +682,8 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
             var i = 0
             while (vipinfo != null && i < vipinfo.size) {
                 val item = vipinfo.getJSONObject(i)
-                val friend = friendMap[item.getLongValue("u")]
-                friend!!.isVip = item.getIntValue("is_vip") == 1
+                val friend = friendMap[item.getLongValue("u")]!!
+                friend.isVip = item.getIntValue("is_vip") == 1
                 friend.vipLevel = item.getIntValue("vip_level")
                 i++
             }
@@ -720,12 +722,12 @@ class SmartQQClient(callback: MessageCallback?) : Closeable {
             val json = JSON.parseObject(response.body)
             val retCode = json.getInteger("retcode")
             when (retCode) {
-                null   -> throw RequestException(String.format("请求失败，Api返回异常", retCode))
+                null   -> throw RequestException("请求失败，Api返回异常")
                 0      -> {
                 }
                 103    -> LOGGER.error("请求失败，Api返回码[103]。你需要进入http://w.qq.com，检查是否能正常接收消息。如果可以的话点击[设置]->[退出登录]后查看是否恢复正常")
                 100100 -> LOGGER.debug("请求失败，Api返回码[100100]")
-                else   -> throw RequestException(String.format("请求失败，Api返回码[%d]", retCode))
+                else   -> throw RequestException("请求失败，Api返回码[$retCode]")
             }
             return json
         }

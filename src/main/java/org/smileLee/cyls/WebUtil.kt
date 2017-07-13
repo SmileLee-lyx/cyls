@@ -6,38 +6,22 @@ import java.net.*
 object WebUtil {
 
     /**
-     * @param httpUrl :请求接口
-     * *
+     * @param urlString :请求接口
+     *
      * @return 返回结果
      */
-    fun request(httpUrl: String, param: Map<String, String>?, mode: String): String? {
-        val reader: BufferedReader
-        var result: String? = null
-        val sbf = StringBuilder()
-
-        try {
-            val url = URL(httpUrl)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = mode
-            if (param != null) {
-                for (key in param.keys) {
-                    connection.addRequestProperty(key, param[key])
-                }
-            }
-            connection.connect()
-            reader = BufferedReader(InputStreamReader(connection.inputStream, "UTF-8"))
-            var strRead: String? = null
-            while ({ strRead = reader.readLine();strRead }() != null) {
-                sbf.append(strRead!!)
-                sbf.append("\r\n")
-            }
-            reader.close()
-            result = sbf.toString()
-        } catch (e: Exception) {
-            e.printStackTrace()
+    fun request(urlString: String, parameters: Map<String, String> = HashMap(), mode: String = "GET"): String {
+        val url = URL(urlString)
+        val connection = url.openConnection() as HttpURLConnection
+        connection.requestMethod = mode
+        for ((key, value) in parameters) {
+            connection.addRequestProperty(key, value)
         }
-
-        return result
+        connection.connect()
+        val reader = BufferedReader(InputStreamReader(connection.inputStream, "UTF-8"))
+        val ret = StringBuilder()
+        while (true) ret.append((reader.readLine() ?: break))
+        return ret.toString()
     }
 
 }

@@ -3,9 +3,11 @@ package org.smileLee.cyls
 import com.alibaba.fastjson.*
 import com.scienjus.smartqq.callback.*
 import com.scienjus.smartqq.client.*
+import com.scienjus.smartqq.constant.*
 import com.scienjus.smartqq.model.*
 import org.ansj.splitWord.analysis.*
-import org.smileLee.cyls.Util.byChance
+import org.smileLee.cyls.Util.itemByChance
+import org.smileLee.cyls.Util.runByChance
 import org.smileLee.cyls.Util.time
 import org.smileLee.cyls.cyls.*
 import org.smileLee.cyls.cyls.MatchingVerifier.*
@@ -43,6 +45,7 @@ object Main {
     private val currentUser get() = data._cylsFriendFromId[currentMessage.userId]!!
 
     fun reply(message: String) {
+        println("[$time] [${currentGroup.name}] > $message")
         client.sendMessageToGroup(currentMessage.groupId, message)
     }
 
@@ -79,7 +82,7 @@ object Main {
                                 && getGroupUserNick(message.groupId, message.userId) != "系统消息") {
                             currentGroup.addMessage()
                             if (currentUser.markName == "79") {
-                                byChance(0.3) {
+                                runByChance(0.3) {
                                     reply(message.content!!)
                                 }
                             } else {
@@ -93,11 +96,16 @@ object Main {
         }
     }
 
+    val savedFileName = "cylsData/savedFile.txt"
+    val savedFile = File(savedFileName)
+    val qrCodeFileName = "cylsData/qrcode.png"
+    val qrCodeFile = File(qrCodeFileName)
+
     /**
      * 加载群信息等
      */
     private fun load() {
-        val file = File("savedFileJSON.txt")
+        val file = savedFile
         val fin = FileInputStream(file)
         val length = fin.available()
         val bytes = ByteArray(length)
@@ -141,7 +149,7 @@ object Main {
      */
     private fun save() {
         val json = JSON.toJSON(data)
-        val file = File("savedFileJSON.txt")
+        val file = savedFile
         if (file.exists()) file.delete()
         val fout = FileOutputStream(file)
         fout.write(json.toString().toByteArray())
@@ -202,6 +210,51 @@ object Main {
         getGroupInfoFromID(gid)
         val user = data.cylsGroupFromId[gid].groupUsersFromId[uid]
         return user.card ?: user.nick ?: null!!
+    }
+
+    private val weatherKey = "3511aebb46e04a59b77da9b1c648c398"               //天气查询密钥
+    private val weatherUrl = ApiURL("https://free-api.heweather.com/v5/forecast?city={1}&key={2}", "")
+
+    /**
+     * @param cityName 查询的城市名
+     * @param d        0=今天 1=明天 2=后天
+     */
+    fun getWeather(cityName: String, d: Int) {
+        val actualCityName = cityName.replace("[ 　\t\n]".toRegex(), "")
+        if (actualCityName == "") {
+            reply("请输入城市名称进行查询哦|•ω•`)")
+        } else {
+            val days = arrayOf("今天", "明天", "后天")
+            reply("云裂天气查询服务|•ω•`)\n下面查询$actualCityName${days[d]}的天气:")
+            var msg = ""
+            val web = weatherUrl.buildUrl(actualCityName, weatherKey)
+            try {
+                val result = WebUtil.request(web)
+                val weather = JSON.parseObject(result)
+                val weatherData = weather.getJSONArray("HeWeather5").getJSONObject(0)
+                val basic = weatherData.getJSONObject("basic")
+                if (basic == null) {
+                    reply("啊呀，真抱歉，查询失败的说，请确认这个地名是国内的城市名……|•ω•`)")
+                } else {
+                    val forecast = weatherData.getJSONArray("daily_forecast")
+                    val day = forecast.getJSONObject(d)
+                    val cond = day.getJSONObject("cond")
+                    if (cond.getString("txt_d") == cond.getString("txt_n")) {
+                        msg += "全天${cond.getString("txt_d")},\n"
+                    } else {
+                        msg += "白天${cond.getString("txt_d")}，夜晚${cond.getString("txt_n")}，\n"
+                    }
+                    val tmp = day.getJSONObject("tmp")
+                    msg += "最高温${tmp.getString("max")}℃，最低温${tmp.getString("min")}℃，\n"
+                    val wind = day.getJSONObject("wind")
+                    if (wind.getString("sc") == "微风") msg += "微${wind.getString("dir")}|•ω•`)"
+                    else msg += "${wind.getString("dir")}${wind.getString("sc")}级|•ω•`)"
+                    reply(msg)
+                }
+            } catch(e: Exception) {
+                reply("啊呀，真抱歉，查询失败的说，请确认这个地名是国内的城市名……|•ω•`)")
+            }
+        }
     }
 
     val root = TreeNode("", null) {
@@ -390,7 +443,7 @@ cyls.help.util
         if (str.startsWith(" ")) str = str.substring(1)
         val strs = str.split(" ")
         if (strs.size >= 2) {
-            reply(Util.getWeather(strs[0], strs[1].toInt()))
+            getWeather(strs[0], strs[1].toInt())
         } else reply("请输入城市名与天数|•ω•`)")
     }
     val utilWeatherDay0 = TreeNode("day0", utilWeather) {
@@ -398,7 +451,7 @@ cyls.help.util
         if (str.startsWith(" ")) str = str.substring(1)
         val strs = str.split(" ")
         if (strs.isNotEmpty()) {
-            reply(Util.getWeather(strs[0], 0))
+            getWeather(strs[0], 0)
         } else reply("请输入城市名|•ω•`)")
     }
     val utilWeatherDay1 = TreeNode("day1", utilWeather) {
@@ -406,7 +459,7 @@ cyls.help.util
         if (str.startsWith(" ")) str = str.substring(1)
         val strs = str.split(" ")
         if (strs.isNotEmpty()) {
-            reply(Util.getWeather(strs[0], 1))
+            getWeather(strs[0], 1)
         } else reply("请输入城市名|•ω•`)")
     }
     val utilWeatherDay2 = TreeNode("day2", utilWeather) {
@@ -414,7 +467,7 @@ cyls.help.util
         if (str.startsWith(" ")) str = str.substring(1)
         val strs = str.split(" ")
         if (strs.isNotEmpty()) {
-            reply(Util.getWeather(strs[0], 2))
+            getWeather(strs[0], 2)
         } else reply("请输入城市名|•ω•`)")
     }
     val utilWeatherToday = TreeNode("today", utilWeather) {
@@ -422,7 +475,7 @@ cyls.help.util
         if (str.startsWith(" ")) str = str.substring(1)
         val strs = str.split(" ")
         if (strs.isNotEmpty()) {
-            reply(Util.getWeather(strs[0], 0))
+            getWeather(strs[0], 0)
         } else reply("请输入城市名|•ω•`)")
     }
     val utilWeatherTomorrow = TreeNode("tomorrow", utilWeather) {
@@ -430,7 +483,7 @@ cyls.help.util
         if (str.startsWith(" ")) str = str.substring(1)
         val strs = str.split(" ")
         if (strs.isNotEmpty()) {
-            reply(Util.getWeather(strs[0], 1))
+            getWeather(strs[0], 1)
         } else reply("请输入城市名|•ω•`)")
     }
     val utilCal = TreeNode("cal", util) {
@@ -539,19 +592,38 @@ cyls.util.weather.day2 无锡
                 if (result.filter { it.realName == "云裂" }.isNotEmpty())
                     reply("叫我做什么|•ω•`)")
             },
-            RegexNode(".*(大新闻|知识水平|谈笑风生|太暴力了|暴力膜|高到不知道?那里去).*") {
-                byChance(0.5, {
-                    reply("不要整天搞个大新闻")
-                }, {
-                    reply("迪兰特比你们不知道高到哪里去了，我和他谈笑风生")
-                })
+            RegexNode(".*(大新闻|知识水平|谈笑风生|太暴力了|这样暴力|暴力膜|高到不知道?那里去|报道上?([江将]来)?(要是)?出了偏差" +
+                    "|江来|泽任|民白|(我(今天)?)?(算是)?得罪了?你们?一下|批判一番|真正的粉丝).*") {
+                reply(itemByChance(
+                        "不要整天搞个大新闻|•ω•`)",
+                        "迪兰特比你们不知道高到哪里去了，我和他谈笑风生|•ω•`)",
+                        "你们还是要提高自己的知识水平|•ω•`)",
+                        "你们这样是要被拉出去续的|•ω•`)",
+                        "江来报道上出了偏差，你们是要负泽任的，民不民白?|•ω•`)",
+                        "我今天算是得罪了你们一下|•ω•`)",
+                        "真正的粉丝……|•ω•`)"
+                ))
+            },
+            RegexNode("苟(.|…|。|\\[\"face\",\\d+])*") {
+                reply("富贵，无相忘|•ω•`)")
+            },
+            RegexNode(".*(这种操作|什么操作|新的操作).*") {
+                reply("一直都有这种操作啊|•ω•`)")
+            },
+            RegexNode(".*((什么)?原因么?要?(自己)?找一?找?|什么原因|引起重视|知名度).*") {
+                reply(itemByChance(
+                        "什么原因么自己找一找|•ω•`)",
+                        "这个么要引起重视|•ω•`)",
+                        "lw:我的知名度很高了，不用你们宣传了|•ω•`)"
+                ))
             }
     ))
 
     @JvmStatic fun main(args: Array<String>) {
         ToAnalysis.parse("233").toString() //初始化分词库，无实际作用
 
-        client = SmartQQClient(callback)
+        client = SmartQQClient(callback, qrCodeFile)
+        client.start()
         load()
 
         //为防止请求过多导致服务器启动自我保护
