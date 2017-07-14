@@ -11,6 +11,7 @@ class Data(
         @JSONField
         var cylsGroupList: ArrayList<CylsGroup> = ArrayList()
 ) {
+
     @JSONField(serialize = false) var _cylsFriendFromId: HashMap<Long, CylsFriend> = HashMap()
     @JSONField(serialize = false) var _cylsGroupFromId: HashMap<Long, CylsGroup> = HashMap()
     @JSONField(serialize = false) val cylsFriendFromId = InitSafeMap(_cylsFriendFromId) { key ->

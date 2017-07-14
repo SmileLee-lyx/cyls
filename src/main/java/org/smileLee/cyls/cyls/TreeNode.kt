@@ -25,10 +25,10 @@ class TreeNode {
     }
 
     //used in java
-    constructor(name: String, parent: TreeNode, runner: RunnerForJava) {
+    constructor(name: String, parent: TreeNode?, runner: RunnerForJava) {
         this.name = name
         this.runner = { runner.run(it) }
-        parent.children.put(name, this)
+        parent?.children?.put(name, this)
     }
 
     constructor(name: String, runner: RunnerForJava) {
@@ -36,13 +36,13 @@ class TreeNode {
         this.runner = { runner.run(it) }
     }
 
-    fun run(message: String) {
-        runner(message)
-    }
-
     fun findPath(path: List<String>, index: Int = 0): TreeNode {
         return if (index == path.size) this
         else children[path[index]]?.findPath(path, index + 1) ?: throw PathException()
+    }
+
+    fun run(message: String) {
+        runner(message)
     }
 }
 

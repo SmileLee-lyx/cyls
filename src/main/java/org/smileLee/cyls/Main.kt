@@ -633,12 +633,12 @@ cyls.util.weather.day2 无锡
     }
 
     val regexVerifier = createVerifier {
-        regex(".*表白.*") {
+        contain("表白", {
             val result = ToAnalysis.parse(it)
             if (it.matches(".*表白云裂.*".toRegex()))
                 reply("表白${getGroupUserNick(currentMessage.groupId, currentMessage.userId)}|•ω•`)")
             else if (result.filter { it.realName == "表白" }.isNotEmpty()) reply("表白+1 |•ω•`)")
-        }
+        })
         regex("(\\[\"face\",\\d+])*晚安(\\[\"face\",\\d+])*") {
             val hasGreeted = currentGroup.hasGreeted
             currentGroup.addGreeting()
@@ -649,27 +649,59 @@ cyls.util.weather.day2 无锡
             currentGroup.addGreeting()
             if (!hasGreeted) reply("早|•ω•`)")
         }
-        regex(".*(有没有.*|有.{1,5}吗)") {
+        anyOf({
+            contain("有没有")
+            containRegex("有.{1,5}吗")
+        }) {
             reply(itemByChance(
                     "没有（逃|•ω•`)",
                     "有（逃|•ω•`)"
             ))
         }
-        regex(".*(是不是.*|是.{1,5}吗)") {
+        anyOf({
+            contain("是不是")
+            containRegex("是.{1,5}吗")
+        }) {
             reply(itemByChance(
                     "不是（逃|•ω•`)",
                     "是（逃|•ω•`)"
             ))
         }
-        regex("(.*自检.*云裂.*)|(.*云裂.*自检.*)") {
-            reply("自检完毕\n一切正常哦|•ω•`)")
+        anyOf({
+            contain("喜不喜欢")
+            containRegex("喜欢.{1,5}吗")
+        }) {
+            reply(itemByChance(
+                    "喜欢（逃|•ω•`)",
+                    "不喜欢（逃|•ω•`)"
+            ))
         }
-        regex(".*云裂.*") {
-            val result = ToAnalysis.parse(it)
-            if (result.filter { it.realName == "云裂" }.isNotEmpty())
-                reply("叫我做什么|•ω•`)")
+        containPath("云裂") {
+            contain("自检") {
+                reply("自检完毕\n一切正常哦|•ω•`)")
+            }
+            default {
+                val result = ToAnalysis.parse(it)
+                if (result.filter { it.realName == "云裂" }.isNotEmpty())
+                    reply("叫我做什么|•ω•`)")
+            }
         }
-        regex(".*(大新闻|知识水平|谈笑风生|太暴力了|这样暴力|暴力膜|江来|泽任|民白|批判一番|真正的粉丝|江信江疑|听风就是雨|长者).*") {
+        anyOf({
+            contain("大新闻")
+            contain("知识水平")
+            contain("谈笑风生")
+            contain("太暴力了")
+            contain("这样暴力")
+            contain("暴力膜")
+            contain("江来")
+            contain("泽任")
+            contain("民白")
+            contain("批判一番")
+            contain("真正的粉丝")
+            contain("江信江疑")
+            contain("听风就是雨")
+            contain("长者")
+        }) {
             reply(itemByChance(
                     "不要整天搞个大新闻|•ω•`)",
                     "你们还是要提高自己的知识水平|•ω•`)",
@@ -677,26 +709,39 @@ cyls.util.weather.day2 无锡
                     "真正的粉丝……|•ω•`)"
             ))
         }
-        regex(".*(高[到了]不知道?(那里去|多少)|报道上?([江将]来)?(要是)?出了偏差|(我(今天)?)?(算是)?得罪了?你们?一下).*") {
+        anyOf({
+            containRegex("高[到了]不知道?(那里去|多少)")
+            containRegex("报道上?([江将]来)?(要是)?出了偏差")
+            containRegex("(我(今天)?)?(算是)?得罪了?你们?一下")
+        }) {
             reply(itemByChance(
                     "迪兰特比你们不知道高到哪里去了，我和他谈笑风生|•ω•`)",
                     "江来报道上出了偏差，你们是要负泽任的，民不民白?|•ω•`)",
                     "我今天算是得罪了你们一下|•ω•`)"
             ))
         }
-        regex("续") {
+        equal("续") {
             reply("吃枣药丸|•ω•`)")
         }
         regex("苟(\\.|…|。|\\[\"face\",\\d+])*") {
             reply("富贵，无相忘|•ω•`)")
         }
-        regex(".*(这种操作|什么操作|新的操作).*") {
+        anyOf({
+            contain("什么操作")
+            contain("这种操作")
+            contain("新的操作")
+        }) {
             reply("一直都有这种操作啊|•ω•`)")
         }
-        regex(".*你们?(一直|继续)?这样(下去)?是不行的.*") {
+        containRegex("你们?(再?一直再?|再?继续再?)?这样(下去)?是不行的", {
             reply("再这样的话是不行的|•ω•`)")
-        }
-        regex(".*((什么)?原因么?要?(自己)?找一?找?|什么原因|引起重视|知名度).*") {
+        })
+        anyOf({
+            containRegex("原因么?要?(自己)?找一?找")
+            contain("什么原因")
+            contain("引起重视")
+            contain("知名度")
+        }) {
             reply(itemByChance(
                     "什么原因么自己找一找|•ω•`)",
                     "这个么要引起重视|•ω•`)",
