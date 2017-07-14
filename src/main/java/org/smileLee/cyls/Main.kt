@@ -731,15 +731,9 @@ cyls.util.weather.day2 无锡
             currentGroup.addGreeting()
             if (!hasGreeted) reply("早|•ω•`)")
         }
-        contain("表白", {
-            val result = ToAnalysis.parse(it)
-            if (it.matches(".*表白云裂.*".toRegex()))
-                reply("表白${getGroupUserNick(currentMessage.groupId, currentMessage.userId)}|•ω•`)")
-            else if (result.filter { it.realName == "表白" }.isNotEmpty()) reply("表白+1 |•ω•`)")
-        })
         anyOf({
             contain("有没有")
-            containRegex("有.{0,5}[么吗]")
+            containRegex("有.{0,5}((?<!什)么|吗)")
         }) {
             reply(itemByChance(
                     "没有（逃|•ω•`)",
@@ -748,7 +742,7 @@ cyls.util.weather.day2 无锡
         }
         anyOf({
             contain("是不是")
-            containRegex("是.{0,5}[么吗]")
+            containRegex("是.{0,5}((?<!什)么|吗)")
         }) {
             reply(itemByChance(
                     "不是（逃|•ω•`)",
@@ -757,7 +751,7 @@ cyls.util.weather.day2 无锡
         }
         anyOf({
             contain("会不会")
-            containRegex("会.{0,5}[么吗]")
+            containRegex("会.{0,5}((?<!什)么|吗)")
         }) {
             reply(itemByChance(
                     "不会（逃|•ω•`)",
@@ -766,7 +760,7 @@ cyls.util.weather.day2 无锡
         }
         anyOf({
             contain("喜不喜欢")
-            containRegex("喜欢.{0,5}[么吗]")
+            containRegex("喜欢.{0,5}((?<!什)么|吗)")
         }) {
             reply(itemByChance(
                     "喜欢（逃|•ω•`)",
@@ -783,6 +777,12 @@ cyls.util.weather.day2 无锡
                     reply("叫我做什么|•ω•`)")
             }
         }
+        contain("表白", {
+            val result = ToAnalysis.parse(it)
+            if (it.matches(".*表白云裂.*".toRegex()))
+                reply("表白${getGroupUserNick(currentMessage.groupId, currentMessage.userId)}|•ω•`)")
+            else if (result.filter { it.realName == "表白" }.isNotEmpty()) reply("表白+1 |•ω•`)")
+        })
         anyOf({
             contain("什么操作")
             contain("这种操作")
