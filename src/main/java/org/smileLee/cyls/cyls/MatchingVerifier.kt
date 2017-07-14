@@ -3,10 +3,8 @@ package org.smileLee.cyls.cyls
 class MatchingVerifier(
         val nodes: ArrayList<VerifyNode>
 ) {
-    fun findAndRun(string: String) {
-        nodes.any {
-            it.verifyAndRun(string)
-        }
+    fun findAndRun(string: String) = nodes.any {
+        it.verifyAndRun(string)
     }
 }
 

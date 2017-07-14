@@ -9,7 +9,9 @@ import org.ansj.splitWord.analysis.*
 import org.smileLee.cyls.cyls.*
 import org.smileLee.cyls.util.*
 import org.smileLee.cyls.util.Util.itemByChance
+import org.smileLee.cyls.util.Util.randomInt
 import org.smileLee.cyls.util.Util.runByChance
+import org.smileLee.cyls.util.Util.sign
 import org.smileLee.cyls.util.Util.time
 import sun.dc.path.*
 import java.io.*
@@ -87,7 +89,7 @@ object Main {
                                     reply(content)
                                 }
                             } else {
-                                regexVerifier.findAndRun(content)
+                                mainVerifier.findAndRun(content)
                             }
                         }
                     }
@@ -432,6 +434,64 @@ cyls.help.sudo
                     })
                 }
             }
+            childNode("moha", {
+                if (currentUser.isAdmin) {
+                    reply("请选择被设置为moha的对象哦|•ω•`)")
+                } else {
+                    reply("你的权限不足哦")
+                    reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
+                }
+            }) {
+                childNode("friend", {
+                    if (currentUser.isAdmin) {
+                        reply("请选择moha模式哦|•ω•`)")
+                    } else {
+                        reply("你的权限不足哦")
+                        reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
+                    }
+                }) {
+                    childNode("on", {
+                        val uin = it.toLong()
+                        val destUser = data._cylsFriendFromId[uin] ?: {
+                            reply("未找到此人哦|•ω•`)")
+                            null!!
+                        }()
+                        if (currentUser.isOwner || (currentUser.isAdmin && !destUser.isAdmin)) {
+                            if (!destUser.isMoha) {
+                                destUser.isMoha = true
+                                reply("${getGroupUserNick(currentGroupId, uin)}已被设置为moha专家，真是搞个大新闻 |•ω•`)")
+                                save()
+                            } else {
+                                reply("${getGroupUserNick(currentGroupId, uin)}本来就是moha专家啊 |•ω•`)")
+                                save()
+                            }
+                        } else {
+                            reply("你的权限不足哦")
+                            reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
+                        }
+                    })
+                    childNode("off", {
+                        val uin = it.toLong()
+                        val destUser = data._cylsFriendFromId[uin] ?: {
+                            reply("未找到此人哦|•ω•`)")
+                            null!!
+                        }()
+                        if (currentUser.isOwner || (currentUser.isAdmin && !destUser.isAdmin)) {
+                            if (destUser.isMoha) {
+                                destUser.isMoha = false
+                                reply("${getGroupUserNick(currentGroupId, uin)}已被取消moha专家，一定是知识水平不够 |•ω•`)")
+                                save()
+                            } else {
+                                reply("${getGroupUserNick(currentGroupId, uin)}本来就不是moha专家啊，为什么要搞大新闻 |•ω•`)")
+                                save()
+                            }
+                        } else {
+                            reply("你的权限不足哦")
+                            reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
+                        }
+                    })
+                }
+            }
             childNode("check", {
                 reply("自检完毕\n一切正常哦|･ω･｀)")
             })
@@ -551,6 +611,34 @@ cyls.help.util
                     } else reply("请输入城市名|•ω•`)")
                 })
             }
+            childNode("dice", {
+                reply("人生有许多精彩，有些人却寄希望于这枚普通的六面体骰子|•ω•`)")
+                sleep(200)
+                reply("结果是：${randomInt(6) + 1}")
+            })
+            childNode("random", {
+                val x = it.toIntOrNull()
+                when (x) {
+                    null                -> {
+                        reply("还有这种骰子? |•ω•`)")
+                        null!!
+                    }
+                    in Int.MIN_VALUE..1 -> {
+                        reply("我这里可没有你要的面数的骰子|•ω•`)\n然而我可以现做一个")
+                    }
+                    2                   -> {
+                        reply("这么重要的事情，你却抛硬币决定|•ω•`)")
+                    }
+                    6                   -> {
+                        reply("人生有许多精彩，有些人却寄希望于这枚普通的六面体骰子|•ω•`)")
+                    }
+                    else                -> {
+                        reply("有的人已经不满足于六面体骰子了，他们需要一个${x}面体的骰子|•ω•`)")
+                    }
+                }
+                sleep(200)
+                reply("结果是：${randomInt(x) + sign(x)}")
+            })
             childNode("cal", {
                 val expression = it.replace("&gt;", ">").replace("&lt;", "<")
                 reply("结果是：${currentGroup.calculate(expression)}")
@@ -632,26 +720,26 @@ cyls.util.weather.day2 无锡
         }
     }
 
-    val regexVerifier = createVerifier {
+    private val mainVerifier = createVerifier {
+        regex("(\\.|…|。|\\[\"face\",\\d+])*晚安(\\.|…|。|\\[\"face\",\\d+])*") {
+            val hasGreeted = currentGroup.hasGreeted
+            currentGroup.addGreeting()
+            if (!hasGreeted) reply("晚安，好梦|•ω•`)")
+        }
+        regex("(\\.|…|。|\\[\"face\",\\d+])*早安?(\\.|…|。|\\[\"face\",\\d+])*") {
+            val hasGreeted = currentGroup.hasGreeted
+            currentGroup.addGreeting()
+            if (!hasGreeted) reply("早|•ω•`)")
+        }
         contain("表白", {
             val result = ToAnalysis.parse(it)
             if (it.matches(".*表白云裂.*".toRegex()))
                 reply("表白${getGroupUserNick(currentMessage.groupId, currentMessage.userId)}|•ω•`)")
             else if (result.filter { it.realName == "表白" }.isNotEmpty()) reply("表白+1 |•ω•`)")
         })
-        regex("(\\[\"face\",\\d+])*晚安(\\[\"face\",\\d+])*") {
-            val hasGreeted = currentGroup.hasGreeted
-            currentGroup.addGreeting()
-            if (!hasGreeted) reply("晚安，好梦|•ω•`)")
-        }
-        regex("(\\[\"face\",\\d+])*早安?(\\[\"face\",\\d+])*") {
-            val hasGreeted = currentGroup.hasGreeted
-            currentGroup.addGreeting()
-            if (!hasGreeted) reply("早|•ω•`)")
-        }
         anyOf({
             contain("有没有")
-            containRegex("有.{1,5}吗")
+            containRegex("有.{0,5}[么吗]")
         }) {
             reply(itemByChance(
                     "没有（逃|•ω•`)",
@@ -660,7 +748,7 @@ cyls.util.weather.day2 无锡
         }
         anyOf({
             contain("是不是")
-            containRegex("是.{1,5}吗")
+            containRegex("是.{0,5}[么吗]")
         }) {
             reply(itemByChance(
                     "不是（逃|•ω•`)",
@@ -668,8 +756,17 @@ cyls.util.weather.day2 无锡
             ))
         }
         anyOf({
+            contain("会不会")
+            containRegex("会.{0,5}[么吗]")
+        }) {
+            reply(itemByChance(
+                    "不会（逃|•ω•`)",
+                    "会（逃|•ω•`)"
+            ))
+        }
+        anyOf({
             contain("喜不喜欢")
-            containRegex("喜欢.{1,5}吗")
+            containRegex("喜欢.{0,5}[么吗]")
         }) {
             reply(itemByChance(
                     "喜欢（逃|•ω•`)",
@@ -686,6 +783,37 @@ cyls.util.weather.day2 无锡
                     reply("叫我做什么|•ω•`)")
             }
         }
+        anyOf({
+            contain("什么操作")
+            contain("这种操作")
+            contain("新的操作")
+        }) {
+            reply("一直都有这种操作啊|•ω•`)")
+        }
+        containRegex("你们?(再?一直再?|再?继续再?)?这样(下去)?是不行的", {
+            reply("再这样的话是不行的|•ω•`)")
+        })
+        anyOf({
+            containRegex("原因么?要?(自己)?找一?找")
+            contain("什么原因")
+            contain("引起重视")
+            contain("知名度")
+        }) {
+            reply(itemByChance(
+                    "什么原因么自己找一找|•ω•`)",
+                    "这个么要引起重视|•ω•`)",
+                    "lw:我的知名度很高了，不用你们宣传了|•ω•`)"
+            ))
+        }
+        special {
+            if (!currentUser.isMoha)
+                commonMohaVerifier.findAndRun(it)
+            else
+                mohaExpertVerifier.findAndRun(it)
+        }
+    }
+
+    private val commonMohaVerifier = createVerifier {
         anyOf({
             contain("大新闻")
             contain("知识水平")
@@ -726,27 +854,46 @@ cyls.util.weather.day2 无锡
         regex("苟(\\.|…|。|\\[\"face\",\\d+])*") {
             reply("富贵，无相忘|•ω•`)")
         }
+    }
+
+    private val mohaExpertVerifier = createVerifier {
         anyOf({
-            contain("什么操作")
-            contain("这种操作")
-            contain("新的操作")
-        }) {
-            reply("一直都有这种操作啊|•ω•`)")
-        }
-        containRegex("你们?(再?一直再?|再?继续再?)?这样(下去)?是不行的", {
-            reply("再这样的话是不行的|•ω•`)")
-        })
-        anyOf({
-            containRegex("原因么?要?(自己)?找一?找")
-            contain("什么原因")
-            contain("引起重视")
-            contain("知名度")
+            contain("大新闻")
+            contain("知识水平")
+            contain("谈笑风生")
+            contain("太暴力了")
+            contain("这样暴力")
+            contain("暴力膜")
+            contain("江")
+            contain("泽任")
+            contain("民白")
+            contain("批判一番")
+            contain("知识水平")
+            contain("angry")
+            contain("moha")
+            contain("真正的粉丝")
+            contain("听风就是雨")
+            contain("长者")
+            contain("苟")
+            contain("哪里去")
+            contain("他")
+            contain("得罪")
+            contain("报道")
+            contain("偏差")
         }) {
             reply(itemByChance(
-                    "什么原因么自己找一找|•ω•`)",
-                    "这个么要引起重视|•ω•`)",
-                    "lw:我的知名度很高了，不用你们宣传了|•ω•`)"
+                    "不要整天搞个大新闻|•ω•`)",
+                    "你们还是要提高自己的知识水平|•ω•`)",
+                    "你们这样是要被拉出去续的|•ω•`)",
+                    "真正的粉丝……|•ω•`)",
+                    "迪兰特比你们不知道高到哪里去了，我和他谈笑风生|•ω•`)",
+                    "江来报道上出了偏差，你们是要负泽任的，民不民白?|•ω•`)",
+                    "我今天算是得罪了你们一下|•ω•`)",
+                    "吃枣药丸|•ω•`)"
             ))
+        }
+        contain("苟") {
+            reply("富贵，无相忘|•ω•`)")
         }
     }
 

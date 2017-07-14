@@ -78,6 +78,20 @@ fun MatchingVerifier.allOf(init: AllRunnerNode.() -> Unit, runner: (String) -> U
     nodes.add(node)
 }
 
+fun MatchingVerifier.special(matches: (String) -> Boolean, runner: (String) -> Unit) {
+    nodes.add(object : RunnerNode {
+        override val runner = runner
+        override fun matches(string: String) = matches(string)
+    })
+}
+
+fun MatchingVerifier.special(verifyAndRun: (String) -> Boolean) {
+    nodes.add(object : VerifyNode {
+        override fun matches(string: String) = false
+        override fun verifyAndRun(string: String) = verifyAndRun(string)
+    })
+}
+
 fun PathNode.equal(string: String, runner: (String) -> Unit = {}) {
     children.add(EqualNode(string, runner))
 }

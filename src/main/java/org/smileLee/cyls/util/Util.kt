@@ -49,6 +49,7 @@ object Util {
     }
 
     fun randomInt(x: Int) = (Math.random() * x).toInt()
+    fun sign(x: Int) = if (x > 0) 1 else if (x < 0) -1 else 0
 
     inline fun runByChance(chance: Double, action: () -> Unit) {
         if (Math.random() < chance) action()
