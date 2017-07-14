@@ -2,7 +2,7 @@ package org.smileLee.cyls.cyls
 
 import com.alibaba.fastjson.annotation.*
 import com.alibaba.fastjson.serializer.*
-import org.smileLee.cyls.*
+import org.smileLee.cyls.util.*
 
 @JSONType(serialzeFeatures = arrayOf(SerializerFeature.IgnoreNonFieldGetter))
 class Data(

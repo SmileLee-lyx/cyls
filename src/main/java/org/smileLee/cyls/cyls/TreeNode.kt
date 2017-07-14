@@ -24,12 +24,6 @@ class TreeNode {
         this.runner = runner
     }
 
-    constructor(name: String, runner: (String) -> Unit, init: TreeNode.() -> Unit) {
-        this.name = name
-        this.runner = runner
-        this.init()
-    }
-
     //used in java
     constructor(name: String, parent: TreeNode, runner: RunnerForJava) {
         this.name = name
@@ -40,14 +34,6 @@ class TreeNode {
     constructor(name: String, runner: RunnerForJava) {
         this.name = name
         this.runner = { runner.run(it) }
-    }
-
-    fun childNode(name: String, runner: (String) -> Unit, init: TreeNode.() -> Unit) {
-        children.put(name, TreeNode(name, runner, init))
-    }
-
-    fun childNode(name: String, runner: (String) -> Unit) {
-        children.put(name, TreeNode(name, runner))
     }
 
     fun run(message: String) {

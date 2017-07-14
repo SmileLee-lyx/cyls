@@ -6,11 +6,11 @@ import com.scienjus.smartqq.client.*
 import com.scienjus.smartqq.constant.*
 import com.scienjus.smartqq.model.*
 import org.ansj.splitWord.analysis.*
-import org.smileLee.cyls.Util.itemByChance
-import org.smileLee.cyls.Util.runByChance
-import org.smileLee.cyls.Util.time
 import org.smileLee.cyls.cyls.*
-import org.smileLee.cyls.cyls.MatchingVerifier.*
+import org.smileLee.cyls.util.*
+import org.smileLee.cyls.util.Util.itemByChance
+import org.smileLee.cyls.util.Util.runByChance
+import org.smileLee.cyls.util.Util.time
 import sun.dc.path.*
 import java.io.*
 import java.lang.Thread.*
@@ -67,13 +67,14 @@ object Main {
         override fun onGroupMessage(message: GroupMessage) {
             if (working) {
                 try {
+                    val content = message.content!!
                     println("[$time] [${getGroupName(message.groupId)}] " +
-                            "${getGroupUserNick(message.groupId, message.userId)}：${message.content}")
+                            "${getGroupUserNick(message.groupId, message.userId)}：$content")
                     currentMessage = message
                     currentGroup
                     currentUser
-                    if (message.content!!.startsWith("cyls.")) try {
-                        val order = Util.readOrder(message.content!!.substring(5))
+                    if (content.startsWith("cyls.")) try {
+                        val order = Util.readOrder(content.substring(5))
                         root.findPath(order.path).run(order.message)
                     } catch (e: PathException) {
                         reply("请确保输入了正确的指令哦|•ω•`)")
@@ -81,12 +82,12 @@ object Main {
                         if (!currentGroup.isPaused && !currentUser.isIgnored && !currentGroup.hot
                                 && getGroupUserNick(message.groupId, message.userId) != "系统消息") {
                             currentGroup.addMessage()
-                            if (currentUser.markName == "79") {
-                                runByChance(0.3) {
-                                    reply(message.content!!)
+                            if (currentUser.isRepeated) {
+                                runByChance(currentUser.repeatFrequency) {
+                                    reply(content)
                                 }
                             } else {
-                                regexVerifier.findAndRun(message.content!!)
+                                regexVerifier.findAndRun(content)
                             }
                         }
                     }
@@ -257,7 +258,7 @@ object Main {
         }
     }
 
-    val root = TreeNode("", {
+    val root = createTree("", {
 
     }) {
         childNode("sudo", {
@@ -266,16 +267,12 @@ cyls.help.sudo
 查看帮助信息|•ω•`)""")
         }) {
             childNode("ignore", {
-                val uin = java.lang.Long.parseLong(it)
+                val uin = it.toLong()
                 val destUser = data._cylsFriendFromId[uin] ?: {
                     reply("未找到此人哦|•ω•`)")
                     null!!
                 }()
-                if (currentUser.isOwner) {
-                    if (!destUser.isIgnored) destUser.ignoreLevel = CylsFriend.IgnoreLevel.IGNORED
-                    reply("${getGroupUserNick(currentGroupId, uin)}已被屏蔽，然而这么做是不是不太好…… |•ω•`)")
-                    save()
-                } else if (currentUser.isAdmin && !destUser.isAdmin) {
+                if (currentUser.isOwner || (currentUser.isAdmin && !destUser.isAdmin)) {
                     if (!destUser.isIgnored) destUser.ignoreLevel = CylsFriend.IgnoreLevel.IGNORED
                     reply("${getGroupUserNick(currentGroupId, uin)}已被屏蔽，然而这么做是不是不太好…… |•ω•`)")
                     save()
@@ -285,16 +282,12 @@ cyls.help.sudo
                 }
             })
             childNode("recognize", {
-                val uin = java.lang.Long.parseLong(it)
+                val uin = it.toLong()
                 val destUser = data._cylsFriendFromId[uin] ?: {
                     reply("未找到此人哦|•ω•`)")
                     null!!
                 }()
-                if (currentUser.isOwner) {
-                    if (destUser.isIgnored) destUser.ignoreLevel = CylsFriend.IgnoreLevel.RECOGNIZED
-                    reply("${getGroupUserNick(currentGroupId, uin)}已被解除屏蔽，当初为什么要屏蔽他呢…… |•ω•`)")
-                    save()
-                } else if (currentUser.isAdmin && !destUser.isAdmin) {
+                if (currentUser.isOwner || (currentUser.isAdmin && !destUser.isAdmin)) {
                     if (destUser.isIgnored) destUser.ignoreLevel = CylsFriend.IgnoreLevel.RECOGNIZED
                     reply("${getGroupUserNick(currentGroupId, uin)}已被解除屏蔽，当初为什么要屏蔽他呢…… |•ω•`)")
                     save()
@@ -304,7 +297,7 @@ cyls.help.sudo
                 }
             })
             childNode("authorize", {
-                val uin = java.lang.Long.parseLong(it)
+                val uin = it.toLong()
                 val destUser = data._cylsFriendFromId[uin] ?: {
                     reply("未找到此人哦|•ω•`)")
                     null!!
@@ -323,7 +316,7 @@ cyls.help.sudo
                 }
             })
             childNode("unauthorize", {
-                val uin = java.lang.Long.parseLong(it)
+                val uin = it.toLong()
                 val destUser = data._cylsFriendFromId[uin] ?: {
                     reply("未找到此人哦|•ω•`)")
                     null!!
@@ -349,6 +342,7 @@ cyls.help.sudo
                         println(2333)
                         client.sendMessageToGroup(currentMessage.groupId, "通讯已中断（逃 |•ω•`)")
                         currentGroup.isPaused = true
+                        save()
                     } else {
                         client.sendMessageToGroup(currentMessage.groupId, "已处于中断状态了啊……不能再中断一次了 |•ω•`)")
                     }
@@ -362,6 +356,7 @@ cyls.help.sudo
                     if (currentGroup.isPaused) {
                         reply("通讯恢复啦 |•ω•`)")
                         currentGroup.isPaused = false
+                        save()
                     } else {
                         reply("通讯并没有中断啊，为什么要恢复呢 |•ω•`)")
                     }
@@ -370,6 +365,73 @@ cyls.help.sudo
                     reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
                 }
             })
+            childNode("repeat", {
+                if (currentUser.isAdmin) {
+                    reply("请选择重复对象哦|•ω•`)")
+                } else {
+                    reply("你的权限不足哦")
+                    reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
+                }
+            }) {
+                childNode("friend", {
+                    if (currentUser.isAdmin) {
+                        reply("请选择重复模式哦|•ω•`)")
+                    } else {
+                        reply("你的权限不足哦")
+                        reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
+                    }
+                }) {
+                    childNode("on", {
+                        var str = it.replace("  ", " ")
+                        if (str.startsWith(" ")) str = str.substring(1)
+                        val strs = str.split(" ")
+                        if (strs.isEmpty()) {
+                            reply("请输入被重复的用户的uin|•ω•`)")
+                            null!!
+                        }
+                        val uin = strs[0].toLong()
+                        val destUser = data._cylsFriendFromId[uin] ?: {
+                            reply("未找到此人哦|•ω•`)")
+                            null!!
+                        }()
+                        val frequency = strs[1].toDoubleOrNull() ?: 0.3
+                        if (currentUser.isOwner || (currentUser.isAdmin && !destUser.isAdmin)) {
+                            if (!destUser.isRepeated) {
+                                destUser.isRepeated = true
+                                destUser.repeatFrequency = frequency
+                                reply("${getGroupUserNick(currentGroupId, uin)}的话将被以${frequency}的概率重复，然而这真是无聊 |•ω•`)")
+                                save()
+                            } else {
+                                destUser.repeatFrequency = frequency
+                                reply("重复${getGroupUserNick(currentGroupId, uin)}的话的概率被设置为$frequency |•ω•`)")
+                                save()
+                            }
+                        } else {
+                            reply("你的权限不足哦")
+                            reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
+                        }
+                    })
+                    childNode("off", {
+                        val uin = it.toLong()
+                        val destUser = data._cylsFriendFromId[uin] ?: {
+                            reply("未找到此人哦|•ω•`)")
+                            null!!
+                        }()
+                        if (currentUser.isOwner || (currentUser.isAdmin && !destUser.isAdmin)) {
+                            if (!destUser.isRepeated) {
+                                reply("${getGroupUserNick(currentGroupId, uin)}并没有被重复啊 |•ω•`)")
+                            } else {
+                                destUser.isRepeated = false
+                                reply("${getGroupUserNick(currentGroupId, uin)}已被取消重复 |•ω•`)")
+                                save()
+                            }
+                        } else {
+                            reply("你的权限不足哦")
+                            reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
+                        }
+                    })
+                }
+            }
             childNode("check", {
                 reply("自检完毕\n一切正常哦|･ω･｀)")
             })
@@ -448,46 +510,46 @@ cyls.help.util
                     getWeather(strs[0], strs[1].toInt())
                 } else reply("请输入城市名与天数|•ω•`)")
             }) {
-                childNode("day0") {
+                childNode("day0", {
                     var str = it.replace("  ", " ")
                     if (str.startsWith(" ")) str = str.substring(1)
                     val strs = str.split(" ")
                     if (strs.isNotEmpty()) {
                         getWeather(strs[0], 0)
                     } else reply("请输入城市名|•ω•`)")
-                }
-                childNode("day1") {
+                })
+                childNode("day1", {
                     var str = it.replace("  ", " ")
                     if (str.startsWith(" ")) str = str.substring(1)
                     val strs = str.split(" ")
                     if (strs.isNotEmpty()) {
                         getWeather(strs[0], 1)
                     } else reply("请输入城市名|•ω•`)")
-                }
-                childNode("day2") {
+                })
+                childNode("day2", {
                     var str = it.replace("  ", " ")
                     if (str.startsWith(" ")) str = str.substring(1)
                     val strs = str.split(" ")
                     if (strs.isNotEmpty()) {
                         getWeather(strs[0], 2)
                     } else reply("请输入城市名|•ω•`)")
-                }
-                childNode("today") {
+                })
+                childNode("today", {
                     var str = it.replace("  ", " ")
                     if (str.startsWith(" ")) str = str.substring(1)
                     val strs = str.split(" ")
                     if (strs.isNotEmpty()) {
                         getWeather(strs[0], 0)
                     } else reply("请输入城市名|•ω•`)")
-                }
-                childNode("tomorrow") {
+                })
+                childNode("tomorrow", {
                     var str = it.replace("  ", " ")
                     if (str.startsWith(" ")) str = str.substring(1)
                     val strs = str.split(" ")
                     if (strs.isNotEmpty()) {
                         getWeather(strs[0], 1)
                     } else reply("请输入城市名|•ω•`)")
-                }
+                })
             }
             childNode("cal", {
                 val expression = it.replace("&gt;", ">").replace("&lt;", "<")
@@ -570,81 +632,71 @@ cyls.util.weather.day2 无锡
         }
     }
 
-    val regexVerifier = MatchingVerifier(arrayListOf(
-            RegexNode(".*表白.*") {
-                val result = ToAnalysis.parse(it)
-                if (it.matches(".*表白云裂.*".toRegex()))
-                    reply("表白${getGroupUserNick(currentMessage.groupId, currentMessage.userId)}|•ω•`)")
-                else if (result.filter { it.realName == "表白" }.isNotEmpty()) reply("表白+1 |•ω•`)")
-            },
-            RegexNode("(\\[\"face\",\\d+])*晚安(\\[\"face\",\\d+])*") {
-                val hasGreeted = currentGroup.hasGreeted
-                currentGroup.addGreeting()
-                if (!hasGreeted) reply("晚安，好梦|•ω•`)")
-            },
-            RegexNode("(\\[\"face\",\\d+])*早安?(\\[\"face\",\\d+])*") {
-                val hasGreeted = currentGroup.hasGreeted
-                currentGroup.addGreeting()
-                if (!hasGreeted) reply("早|•ω•`)")
-            },
-            RegexNode(".*(有没有.*|有.{1,5}吗)") {
-                reply(itemByChance(
-                        "没有（逃|•ω•`)",
-                        "有（逃|•ω•`)"
-                ))
-            },
-            RegexNode(".*(是不是.*|是.{1,5}吗)") {
-                reply(itemByChance(
-                        "不是（逃|•ω•`)",
-                        "是（逃|•ω•`)"
-                ))
-            },
-            RegexNode("(.*自检.*云裂.*)|(.*云裂.*自检.*)") {
-                reply("自检完毕\n一切正常哦|•ω•`)")
-            },
-            RegexNode(".*云裂.*") {
-                val result = ToAnalysis.parse(it)
-                if (result.filter { it.realName == "云裂" }.isNotEmpty())
-                    reply("叫我做什么|•ω•`)")
-            },
-            RegexNode(".*(大新闻|知识水平|谈笑风生|太暴力了|这样暴力|暴力膜|江来|泽任|民白|批判一番|真正的粉丝|江信江疑|听风就是雨|长者).*") {
-                reply(itemByChance(
-                        "不要整天搞个大新闻|•ω•`)",
-                        "你们还是要提高自己的知识水平|•ω•`)",
-                        "你们这样是要被拉出去续的|•ω•`)",
-                        "真正的粉丝……|•ω•`)"
-                ))
-            },
-            RegexNode(".*(高[到了]不知道?(那里去|多少)|报道上?([江将]来)?(要是)?出了偏差|(我(今天)?)?(算是)?得罪了?你们?一下).*") {
-                reply(itemByChance(
-                        "迪兰特比你们不知道高到哪里去了，我和他谈笑风生|•ω•`)",
-                        "江来报道上出了偏差，你们是要负泽任的，民不民白?|•ω•`)",
-                        "我今天算是得罪了你们一下|•ω•`)"
-                ))
-            },
-            RegexNode("续") {
-                reply("吃枣药丸|•ω•`)")
-            },
-            RegexNode("苟(\\.|…|。|\\[\"face\",\\d+])*") {
-                reply("富贵，无相忘|•ω•`)")
-            },
-            RegexNode(".*(这种操作|什么操作|新的操作).*") {
-                reply("一直都有这种操作啊|•ω•`)")
-            },
-            RegexNode(".*你们?(一直|继续)?这样(下去)?是不行的.*") {
-                reply("再这样的话是不行的|•ω•`)")
-            },
-            RegexNode(".*((什么)?原因么?要?(自己)?找一?找?|什么原因|引起重视|知名度).*") {
-                reply(itemByChance(
-                        "什么原因么自己找一找|•ω•`)",
-                        "这个么要引起重视|•ω•`)",
-                        "lw:我的知名度很高了，不用你们宣传了|•ω•`)"
-                ))
-            }
-    ))
+    val regexVerifier = createVerifier {
+        regex(".*表白.*") {
+            val result = ToAnalysis.parse(it)
+            if (it.matches(".*表白云裂.*".toRegex()))
+                reply("表白${getGroupUserNick(currentMessage.groupId, currentMessage.userId)}|•ω•`)")
+            else if (result.filter { it.realName == "表白" }.isNotEmpty()) reply("表白+1 |•ω•`)")
+        }
+        regex("(\\[\"face\",\\d+])*晚安(\\[\"face\",\\d+])*") {
+            val hasGreeted = currentGroup.hasGreeted
+            currentGroup.addGreeting()
+            if (!hasGreeted) reply("晚安，好梦|•ω•`)")
+        }
+        regex("(\\[\"face\",\\d+])*早安?(\\[\"face\",\\d+])*") {
+            val hasGreeted = currentGroup.hasGreeted
+            currentGroup.addGreeting()
+            if (!hasGreeted) reply("早|•ω•`)")
+        }
+        regex(".*(有没有.*|有.{1,5}吗)") {
+            reply(itemByChance(
+                    "没有（逃|•ω•`)",
+                    "有（逃|•ω•`)"
+            ))
+        }
+        regex(".*(是不是.*|是.{1,5}吗)") {
+            reply(itemByChance(
+                    "不是（逃|•ω•`)",
+                    "是（逃|•ω•`)"
+            ))
+        }
+        regex("(.*自检.*云裂.*)|(.*云裂.*自检.*)") {
+            reply("自检完毕\n一切正常哦|•ω•`)")
+        }
+        regex(".*云裂.*") {
+            val result = ToAnalysis.parse(it)
+            if (result.filter { it.realName == "云裂" }.isNotEmpty())
+                reply("叫我做什么|•ω•`)")
+        }
+        regex(".*(大新闻|知识水平|谈笑风生|太暴力了|这样暴力|暴力膜|高到不知道?那里去|报道上?([江将]来)?(要是)?出了偏差|江来|泽任|民白|(我(今天)?)?(算是)?得罪了?你们?一下|批判一番|真正的粉丝).*") {
+            reply(itemByChance(
+                    "不要整天搞个大新闻|•ω•`)",
+                    "迪兰特比你们不知道高到哪里去了，我和他谈笑风生|•ω•`)",
+                    "你们还是要提高自己的知识水平|•ω•`)",
+                    "你们这样是要被拉出去续的|•ω•`)",
+                    "江来报道上出了偏差，你们是要负泽任的，民不民白?|•ω•`)",
+                    "我今天算是得罪了你们一下|•ω•`)",
+                    "真正的粉丝……|•ω•`)"
+            ))
+        }
+        regex("苟(.|…|。|\\[\"face\",\\d+])*") {
+            reply("富贵，无相忘|•ω•`)")
+        }
+        regex(".*(这种操作|什么操作|新的操作).*") {
+            reply("一直都有这种操作啊|•ω•`)")
+        }
+        regex(".*((什么)?原因么?要?(自己)?找一?找?|什么原因|引起重视|知名度).*") {
+            reply(itemByChance(
+                    "什么原因么自己找一找|•ω•`)",
+                    "这个么要引起重视|•ω•`)",
+                    "lw:我的知名度很高了，不用你们宣传了|•ω•`)"
+            ))
+        }
+    }
 
     @JvmStatic fun main(args: Array<String>) {
-        ToAnalysis.parse("233") //初始化分词库，无实际作用
+        ToAnalysis.parse("233").toString() //初始化分词库，无实际作用
 
         client = SmartQQClient(callback, qrCodeFile)
         client.start()

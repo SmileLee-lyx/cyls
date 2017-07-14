@@ -9,6 +9,8 @@ class CylsFriend(
         var markName: String = "",
         var adminLevel: AdminLevel = AdminLevel.NORMAL,
         var ignoreLevel: IgnoreLevel = IgnoreLevel.RECOGNIZED,
+        var isRepeated: Boolean = false,
+        var repeatFrequency: Double = 0.0,
         @JSONField(serialize = false) var friend: Friend? = null
 ) {
     enum class AdminLevel {

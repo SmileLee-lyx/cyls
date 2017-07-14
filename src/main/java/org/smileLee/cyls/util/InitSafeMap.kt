@@ -1,4 +1,4 @@
-package org.smileLee.cyls
+package org.smileLee.cyls.util
 
 class InitSafeMap<K, V>(val m: HashMap<K, V>, val init: (K) -> V) : SafeMap<K, V> {
     override fun put(key: K, value: V) = m.put(key, value)

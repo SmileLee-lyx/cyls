@@ -2,7 +2,7 @@ package org.smileLee.cyls.cyls
 
 import com.alibaba.fastjson.annotation.*
 import com.scienjus.smartqq.model.*
-import org.smileLee.cyls.*
+import org.smileLee.cyls.util.*
 import org.smileLee.smilescript.expression.controlExpression.*
 import org.smileLee.smilescript.stack.*
 import java.lang.Thread.*
