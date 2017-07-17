@@ -11,15 +11,15 @@ package com.scienjus.smartqq.model
  */
 class Friend {
 
-    var userId: Long = 0
+    var userId = 0L
 
-    var markname = ""
+    var markname: String? = null
 
-    var nickname: String? = null
+    var nickname = ""
 
-    var isVip: Boolean = false
+    var isVip = false
 
-    var vipLevel: Int = 0
+    var vipLevel = 0
 
     override fun toString(): String {
         return "Friend{userId=$userId, markname='$markname', nickname='$nickname', vip=$isVip, vipLevel=$vipLevel}"

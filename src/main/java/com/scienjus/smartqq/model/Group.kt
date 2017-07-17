@@ -16,7 +16,7 @@ class Group {
     @JSONField(name = "gid")
     var id: Long = 0
 
-    var name: String? = null
+    var name: String = ""
 
     var flag: Long = 0
 

@@ -432,7 +432,7 @@ class SmartQQClient @JvmOverloads constructor(
      * @return
      */
     fun getQQById(user: GroupUser): Long {
-        return getQQById(user.uin)
+        return getQQById(user.uid)
     }
 
     /**
@@ -512,7 +512,7 @@ class SmartQQClient @JvmOverloads constructor(
             var i = 0
             while (minfo != null && i < minfo.size) {
                 val groupUser = minfo.getObject(i, GroupUser::class.java)
-                groupUserMap.put(groupUser.uin, groupUser)
+                groupUserMap.put(groupUser.uid, groupUser)
                 groupInfo.addUser(groupUser)
                 i++
             }

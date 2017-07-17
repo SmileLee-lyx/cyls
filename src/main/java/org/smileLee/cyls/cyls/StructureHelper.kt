@@ -8,6 +8,12 @@ fun createTree(name: String, runner: (String) -> Unit, init: TreeNode.() -> Unit
     return treeNode
 }
 
+fun createTree(init: TreeNode.() -> Unit): TreeNode {
+    val treeNode = TreeNode("") {}
+    treeNode.init()
+    return treeNode
+}
+
 fun TreeNode.childNode(name: String, runner: (String) -> Unit, init: TreeNode.() -> Unit) {
     children.put(name, createTree(name, runner, init))
 }

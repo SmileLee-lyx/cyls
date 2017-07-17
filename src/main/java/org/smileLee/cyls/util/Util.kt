@@ -4,16 +4,31 @@ import java.text.*
 import java.util.*
 
 object Util {
+    enum class TimeFormat(val format: String) {
+        FULL("yyyy-MM-dd hh:mm:ss"),
+        DATE("yyyy-MM-dd"),
+        TIME("hh:mm:ss"),
+        MINUTE("hh:mm"),
+    }
+
     /**
      * 获取本地系统时间
 
      * @return 本地系统时间
      */
-    val time: String
-        get() {
-            val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-            return time.format(Date())
-        }
+    fun getTimeName(format: String, time: Date = Date()): String = SimpleDateFormat(format).format(time)
+
+    @JvmOverloads fun getTimeName(format: TimeFormat, time: Date = Date()) = getTimeName(format.format, time)
+
+    val fullDay = (24 * 60 * 60 * 1000).toLong()
+
+    val timeName get() = getTimeName(TimeFormat.FULL)
+    val todayName get() = getTimeName(TimeFormat.DATE)
+    val tomorrowName get() = getTimeName(TimeFormat.DATE, Date(Date().time + fullDay))
+
+    fun timeOf(name: String, format: String): Date = SimpleDateFormat(format).parse(name)
+    fun timeOf(name: String, format: TimeFormat) = timeOf(name, format.format)
+    fun timeFrom(date: Date, former: Date) = date.time - former.time
 
     class Order(val path: ArrayList<String>, val message: String)
 

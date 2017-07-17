@@ -13,17 +13,17 @@ import java.util.*
  */
 class GroupInfo {
 
-    var gid: Long = 0
+    var gid = 0L
 
-    var createtime: Long = 0
+    var createtime = 0L
 
-    var memo: String? = null
+    var memo = ""
 
-    var name: String? = null
+    var name = ""
 
-    var owner: Long = 0
+    var owner = 0L
 
-    var markname: String? = null
+    var markname = ""
 
     var users: MutableList<GroupUser> = ArrayList()
 

@@ -13,13 +13,13 @@ import com.alibaba.fastjson.*
  */
 class GroupMessage {
 
-    var groupId: Long = 0
+    var groupId = 0L
 
-    var time: Long = 0
+    var time = 0L
 
-    var content: String? = null
+    var content = ""
 
-    var userId: Long = 0
+    var userId = 0L
 
     var font: Font? = null
 

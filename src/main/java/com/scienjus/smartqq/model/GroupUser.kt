@@ -1,5 +1,7 @@
 package com.scienjus.smartqq.model
 
+import com.alibaba.fastjson.annotation.*
+
 /**
  * 群成员.
 
@@ -10,26 +12,16 @@ package com.scienjus.smartqq.model
  * @date 2015/12/24.
  */
 class GroupUser {
-
-    var nick: String? = null
-
-    var province: String? = null
-
-    var gender: String? = null
-
-    var uin: Long = 0
-
-    var country: String? = null
-
-    var city: String? = null
-
+    var nick = ""
+    var province = ""
+    var gender = ""
+    @JSONField(name = "uin")
+    var uid = 0L
+    var country = ""
+    var city = ""
     var card: String? = null
-
-    var clientType: Int = 0
-
-    var status: Int = 0
-
-    var isVip: Boolean = false
-
-    var vipLevel: Int = 0
+    var clientType = 0
+    var status = 0
+    var isVip = false
+    var vipLevel = 0
 }

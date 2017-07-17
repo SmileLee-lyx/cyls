@@ -11,28 +11,29 @@ import com.alibaba.fastjson.*
  * *
  * @date 15/12/19.
  */
-class Message(json: JSONObject) {
+class Message {
 
-    var time: Long = 0
-
-    var content: String? = null
-
-    var userId: Long = 0
-
-    var font: Font? = null
-
-    init {
+    constructor(json: JSONObject) {
         val cont = json.getJSONArray("content")
         this.font = cont.getJSONArray(0).getObject(1, Font::class.java)
-
         val size = cont.size
         val contentBuilder = StringBuilder()
         for (i in 1..size - 1) {
             contentBuilder.append(cont.getString(i))
         }
         this.content = contentBuilder.toString()
-
         this.time = json.getLongValue("time")
         this.userId = json.getLongValue("from_uin")
     }
+
+    constructor()
+
+    var time = 0L
+
+    var content = ""
+
+    var userId = 0L
+
+    var font: Font? = null
+
 }

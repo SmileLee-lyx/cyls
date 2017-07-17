@@ -20,7 +20,9 @@ import java.lang.Thread.*
 ))
 class CylsGroup(
         var name: String = "",
-        var isPaused: Boolean = false
+        var isPaused: Boolean = false,
+        var isRepeated: Boolean = false,
+        var repeatFrequency: Double = 0.0
 ) {
     companion object {
         val MAX_MESSAGE_COUNT = 50
@@ -31,7 +33,7 @@ class CylsGroup(
     var _groupUsersFromId: HashMap<Long, GroupUser> = HashMap()
     val groupUsersFromId = InitSafeMap(_groupUsersFromId) { key ->
         groupInfo?.users?.forEach {
-            if (it.uin == key) {
+            if (it.uid == key) {
                 _groupUsersFromId.put(key, it)
                 return@InitSafeMap it
             }
@@ -57,7 +59,7 @@ class CylsGroup(
     }
 
     fun set(group: Group) {
-        name = group.name!!
+        name = group.name
         this.group = group
     }
 

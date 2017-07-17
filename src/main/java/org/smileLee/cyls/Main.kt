@@ -8,14 +8,18 @@ import com.scienjus.smartqq.model.*
 import org.ansj.splitWord.analysis.*
 import org.smileLee.cyls.cyls.*
 import org.smileLee.cyls.util.*
+import org.smileLee.cyls.util.Util.TimeFormat
 import org.smileLee.cyls.util.Util.itemByChance
 import org.smileLee.cyls.util.Util.randomInt
 import org.smileLee.cyls.util.Util.runByChance
 import org.smileLee.cyls.util.Util.sign
-import org.smileLee.cyls.util.Util.time
+import org.smileLee.cyls.util.Util.timeFrom
+import org.smileLee.cyls.util.Util.timeOf
+import org.smileLee.cyls.util.Util.tomorrowName
 import sun.dc.path.*
 import java.io.*
 import java.lang.Thread.*
+import java.util.*
 
 /**
  * @author 2333
@@ -28,40 +32,65 @@ object Main {
                 return action()
             } catch (e: Exception) {
                 if (retry != MAX_RETRY) {
-                    println("[$time] 第${retry + 1}次尝试失败。正在重试...")
+                    println("[${Util.timeName}] 第${retry + 1}次尝试失败。正在重试...")
                 }
             }
         }
-        println("[$time] 重试次数达到最大限制，程序无法继续进行。")
+        println("[${Util.timeName}] 重试次数达到最大限制，程序无法继续进行。")
         System.exit(1)
         throw Error("Unreachable code")
     }
 
     private var working = true
 
-    private var data = Data()
+    var data = Data()
 
-    private var currentMessage: GroupMessage = GroupMessage()
-    private val currentGroupId get() = currentMessage.groupId
-    private val currentGroup get() = data._cylsGroupFromId[currentMessage.groupId]!!
-    private val currentUser get() = data._cylsFriendFromId[currentMessage.userId]!!
+    var currentGroupMessage: GroupMessage = GroupMessage()
+    private var currentFriendMessage: Message = Message()
+    val currentGroupId get() = currentGroupMessage.groupId
+    val currentGroup get() = data._cylsGroupFromId[currentGroupMessage.groupId]!!
+    private val currentUser get() = data._cylsFriendFromId[currentGroupMessage.userId]!!
+    val currentFriend get() = data._cylsFriendFromId[currentFriendMessage.userId]!!
 
     fun reply(message: String) {
-        println("[$time] [${currentGroup.name}] > $message")
-        client.sendMessageToGroup(currentMessage.groupId, message)
+        println("[${Util.timeName}] [${currentGroup.name}] > $message")
+        client.sendMessageToGroup(currentGroupId, message)
+    }
+
+    fun replyToFriend(message: String) {
+        println("[${Util.timeName}] [${currentFriend.markName}] > $message")
+        client.sendMessageToFriend(currentFriendMessage.userId, message)
     }
 
     /**
      * SmartQQ客户端
      */
-    private lateinit var client: SmartQQClient
+    lateinit var client: SmartQQClient
     val callback = object : MessageCallback {
         override fun onMessage(message: Message) {
             if (working) {
                 try {
-                    println("[$time] [私聊] ${getFriendNick(message.userId)}：${message.content}")
+                    println("[${Util.timeName}] [私聊] ${getFriendNick(message.userId)}：${message.content}")
+                    currentFriendMessage = message
+                    currentGroup
+                    currentFriend
+                    if (message.content.startsWith("cyls.")) try {
+                        val order = Util.readOrder(message.content.substring(5))
+                        currentFriend.status.commandTree.findPath(order.path).run(order.message)
+                    } catch (e: PathException) {
+                        reply("请确保输入了正确的指令哦|•ω•`)")
+                    } else {
+                        if (!currentUser.isIgnored) {
+                            if (currentUser.isRepeated) {
+                                runByChance(currentUser.repeatFrequency) {
+                                    reply(message.content)
+                                }
+                            } else {
+                                currentFriend.status.replyVerifier.findAndRun(message.content)
+                            }
+                        }
+                    }
                 } catch (e: Exception) {
-                    e.printStackTrace()
                 }
             }
         }
@@ -69,15 +98,14 @@ object Main {
         override fun onGroupMessage(message: GroupMessage) {
             if (working) {
                 try {
-                    val content = message.content!!
-                    println("[$time] [${getGroupName(message.groupId)}] " +
-                            "${getGroupUserNick(message.groupId, message.userId)}：$content")
-                    currentMessage = message
+                    println("[${Util.timeName}] [${getGroupName(message.groupId)}] " +
+                            "${getGroupUserNick(message.groupId, message.userId)}：${message.content}")
+                    currentGroupMessage = message
                     currentGroup
                     currentUser
-                    if (content.startsWith("cyls.")) try {
-                        val order = Util.readOrder(content.substring(5))
-                        root.findPath(order.path).run(order.message)
+                    if (message.content.startsWith("cyls.")) try {
+                        val order = Util.readOrder(message.content.substring(5))
+                        groupMainRoot.findPath(order.path).run(order.message)
                     } catch (e: PathException) {
                         reply("请确保输入了正确的指令哦|•ω•`)")
                     } else {
@@ -86,10 +114,14 @@ object Main {
                             currentGroup.addMessage()
                             if (currentUser.isRepeated) {
                                 runByChance(currentUser.repeatFrequency) {
-                                    reply(content)
+                                    reply(message.content)
+                                }
+                            } else if (currentGroup.isRepeated) {
+                                runByChance(currentGroup.repeatFrequency) {
+                                    reply(message.content)
                                 }
                             } else {
-                                mainVerifier.findAndRun(content)
+                                groupMainVerifier.findAndRun(message.content)
                             }
                         }
                     }
@@ -107,7 +139,7 @@ object Main {
     /**
      * 加载群信息等
      */
-    private fun load() {
+    fun load() {
         val file = savedFile
         val fin = FileInputStream(file)
         val length = fin.available()
@@ -117,8 +149,8 @@ object Main {
         data = JSON.parseObject(json, Data::class.java)
         working = false   //映射建立完毕前暂停接收消息以避免NullPointerException
         println()
-        println("[$time] 开始建立索引，暂停接收消息")
-        println("[$time] 尝试建立好友列表索引...")
+        println("[${Util.timeName}] 开始建立索引，暂停接收消息")
+        println("[${Util.timeName}] 尝试建立好友列表索引...")
         val friendList = retry { client.friendList }
         retry {
             friendList.forEach { friend ->
@@ -127,8 +159,8 @@ object Main {
                 data.cylsFriendFromId[friend.userId].set(friend)
             }
         }
-        println("[$time] 建立好友列表索引成功。")
-        println("[$time] 尝试建立群列表索引...")
+        println("[${Util.timeName}] 建立好友列表索引成功。")
+        println("[${Util.timeName}] 尝试建立群列表索引...")
         val groupList = retry { client.groupList }
         retry {
             groupList.forEach { group ->
@@ -137,20 +169,19 @@ object Main {
                 data.cylsGroupFromId[group.id].set(group)
             }
         }
-        println("[$time] 建立群列表索引成功。")
-        data.cylsFriendList.forEach {
-            if (it.markName == "smileLee") it.adminLevel = CylsFriend.AdminLevel.OWNER
-        }
+        println("[${Util.timeName}] 建立群列表索引成功。")
+        data.cylsFriendList.filter { it.markName == "smileLee" }
+                .forEach { it.adminLevel = CylsFriend.AdminLevel.OWNER }
         //为防止请求过多导致服务器启动自我保护
         //群id到群详情映射 和 讨论组id到讨论组详情映射 将在第一次请求时创建
-        println("[$time] 索引建立完毕，开始接收消息\n")
+        println("[${Util.timeName}] 索引建立完毕，开始接收消息\n")
         working = true                                     //映射建立完毕后恢复工作
     }
 
     /**
      * 储存群信息等
      */
-    private fun save() {
+    fun save() {
         val json = JSON.toJSON(data)
         val file = savedFile
         if (file.exists()) file.delete()
@@ -166,7 +197,7 @@ object Main {
      * *
      * @return 该群详情
      */
-    private fun getGroupInfoFromID(id: Long): GroupInfo {
+    fun getGroupInfoFromID(id: Long): GroupInfo {
         val cylsGroup = data.cylsGroupFromId[id]
         return if (cylsGroup.groupInfo != null) cylsGroup.groupInfo!! else {
             val groupInfo = client.getGroupInfo(cylsGroup.group?.code ?: throw RuntimeException())
@@ -209,10 +240,10 @@ object Main {
         return user?.markname ?: user?.nickname ?: null!!
     }
 
-    private fun getGroupUserNick(gid: Long, uid: Long): String {
+    fun getGroupUserNick(gid: Long, uid: Long): String {
         getGroupInfoFromID(gid)
         val user = data.cylsGroupFromId[gid].groupUsersFromId[uid]
-        return user.card ?: user.nick ?: null!!
+        return user.card ?: user.nick
     }
 
     private val weatherKey = "3511aebb46e04a59b77da9b1c648c398"               //天气查询密钥
@@ -260,9 +291,7 @@ object Main {
         }
     }
 
-    val root = createTree("", {
-
-    }) {
+    val groupMainRoot = createTree {
         childNode("sudo", {
             reply("""输入
 cyls.help.sudo
@@ -314,7 +343,7 @@ cyls.help.sudo
                     }
                 } else {
                     reply("你的权限不足哦")
-                    reply("不如输入cyls.sudo.test查看你的权限吧|･ω･｀)")
+                    reply("不如输入cyls.sudo.test查看你的权限吧|•ω•`)")
                 }
             })
             childNode("unauthorize", {
@@ -342,11 +371,11 @@ cyls.help.sudo
                 if (currentUser.isAdmin) {
                     if (!currentGroup.isPaused) {
                         println(2333)
-                        client.sendMessageToGroup(currentMessage.groupId, "通讯已中断（逃 |•ω•`)")
+                        reply("通讯已中断（逃 |•ω•`)")
                         currentGroup.isPaused = true
                         save()
                     } else {
-                        client.sendMessageToGroup(currentMessage.groupId, "已处于中断状态了啊……不能再中断一次了 |•ω•`)")
+                        reply("已处于中断状态了啊……不能再中断一次了 |•ω•`)")
                     }
                 } else {
                     reply("你的权限不足哦")
@@ -375,6 +404,47 @@ cyls.help.sudo
                     reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
                 }
             }) {
+                childNode("group", {
+                    if (currentUser.isAdmin) {
+                        reply("请选择重复模式哦|•ω•`)")
+                    } else {
+                        reply("你的权限不足哦")
+                        reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
+                    }
+                }) {
+                    childNode("on", {
+                        val frequency = it.toDoubleOrNull() ?: 0.3
+                        if (currentUser.isAdmin) {
+                            if (!currentGroup.isRepeated) {
+                                currentGroup.isRepeated = true
+                                currentGroup.repeatFrequency = frequency
+                                reply("本群的所有发言将被以${frequency}的概率重复，然而这真是无聊 |•ω•`)")
+                                save()
+                            } else {
+                                currentGroup.repeatFrequency = frequency
+                                reply("重复本群发言的概率被设置为$frequency |•ω•`)")
+                                save()
+                            }
+                        } else {
+                            reply("你的权限不足哦")
+                            reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
+                        }
+                    })
+                    childNode("off", {
+                        if (currentUser.isAdmin) {
+                            if (!currentGroup.isRepeated) {
+                                currentGroup.isRepeated = false
+                                reply("本群已取消重复 |•ω•`)")
+                                save()
+                            } else {
+                                reply("本来就没有在重复本群的发言啊 |•ω•`)")
+                            }
+                        } else {
+                            reply("你的权限不足哦")
+                            reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
+                        }
+                    })
+                }
                 childNode("friend", {
                     if (currentUser.isAdmin) {
                         reply("请选择重复模式哦|•ω•`)")
@@ -493,7 +563,7 @@ cyls.help.sudo
                 }
             }
             childNode("check", {
-                reply("自检完毕\n一切正常哦|･ω･｀)")
+                reply("自检完毕\n一切正常哦|•ω•`)")
             })
             childNode("test", {
                 if (currentUser.isOwner) {
@@ -510,12 +580,25 @@ cyls.help.sudo
             })
             childNode("say", {
                 if (currentUser.isAdmin) {
-                    client.sendMessageToGroup(currentMessage.groupId, it)
+                    reply(it)
                 } else {
                     reply("你的权限不足哦")
                     reply("不如输入cyls.sudo.test查看你的权限吧，也可以让主人给你授权哦 |•ω•`)")
                 }
-            })
+            }) {
+                childNode("friend", {
+                    val index = it.indexOf(" ")
+                    val userId = it.substring(0, index).toLong()
+                    val content = it.substring(index + 1)
+                    client.sendMessageToFriend(userId, content)
+                })
+                childNode("group", {
+                    val index = it.indexOf(" ")
+                    val groupId = it.substring(0, index).toLong()
+                    val content = it.substring(index + 1)
+                    client.sendMessageToGroup(groupId, content)
+                })
+            }
             childNode("save", {
                 if (currentUser.isOwner) {
                     save()
@@ -552,16 +635,38 @@ cyls.help.util
 查看帮助信息|•ω•`)""")
         }) {
             childNode("query", {
-                reply("开始查找|•ω•`)")
-                val groupUsers = getGroupInfoFromID(currentGroupId).users
-                for (user in groupUsers) {
-                    val userName = getGroupUserNick(currentGroupId, user.uin)
-                    if (userName.contains(it)) {
-                        reply("${user.uin}:$userName")
-                        sleep(100)
+                reply("请选择查找的范围哦|•ω•`)")
+            }) {
+                childNode("groupuser", {
+                    reply("开始查找|•ω•`)")
+                    val groupUsers = getGroupInfoFromID(currentGroupId).users
+                    groupUsers.forEach { user ->
+                        val userName = getGroupUserNick(currentGroupId, user.uid)
+                        if (userName.contains(it)) {
+                            reply("${user.uid}:$userName")
+                            sleep(100)
+                        }
                     }
-                }
-            })
+                })
+                childNode("friend", {
+                    reply("开始查找|•ω•`)")
+                    data.cylsFriendList.forEach { friend ->
+                        val friendInfo = friend.friend
+                        if (friendInfo != null && friendInfo.nickname.contains(it)) {
+                            reply("${friendInfo.userId}:${friendInfo.nickname}")
+                        }
+                    }
+                })
+                childNode("group", {
+                    reply("开始查找|•ω•`)")
+                    data.cylsGroupList.forEach { group ->
+                        val groupInfo = group.group
+                        if (groupInfo != null && groupInfo.name.contains(it)) {
+                            reply("${groupInfo.id}:${groupInfo.name}")
+                        }
+                    }
+                })
+            }
             childNode("weather", {
                 var str = it.replace("  ", " ")
                 if (str.startsWith(" ")) str = str.substring(1)
@@ -694,9 +799,16 @@ cyls.sudo.check
             childNode("util", {
                 reply("""目前云裂的工具功能还不怎么完善呢|•ω•`)
 你可以查询群成员：
-cyls.util.query [群名片的一部分]
+cyls.util.query.groupuser [群名片的一部分]
+查询云裂的好友：
+cyls.util.query.friend [昵称的一部分]
+查询群：
+cyls.util.query.group [群名的一部分]
 你可以查询天气：
 cyls.util.weather
+可以掷骰子或计算1至[最大值]的随机数:
+cyls.util.dice
+cyls.util.random [最大值]
 可以进行简单的计算：
 cyls.util.cal [表达式/代码块]
 关于天气功能的更多内容，输入
@@ -720,7 +832,7 @@ cyls.util.weather.day2 无锡
         }
     }
 
-    private val mainVerifier = createVerifier {
+    private val groupMainVerifier = createVerifier {
         regex("(\\.|…|。|\\[\"face\",\\d+])*晚安(\\.|…|。|\\[\"face\",\\d+])*") {
             val hasGreeted = currentGroup.hasGreeted
             currentGroup.addGreeting()
@@ -773,14 +885,14 @@ cyls.util.weather.day2 无锡
             }
             default {
                 val result = ToAnalysis.parse(it)
-                if (result.filter { it.realName == "云裂" }.isNotEmpty())
+                if (result.filter { it.realName == "云裂" || it.realName == "穿云裂石" }.isNotEmpty())
                     reply("叫我做什么|•ω•`)")
             }
         }
         contain("表白", {
             val result = ToAnalysis.parse(it)
             if (it.matches(".*表白云裂.*".toRegex()))
-                reply("表白${getGroupUserNick(currentMessage.groupId, currentMessage.userId)}|•ω•`)")
+                reply("表白${getGroupUserNick(currentGroupMessage.groupId, currentGroupMessage.userId)}|•ω•`)")
             else if (result.filter { it.realName == "表白" }.isNotEmpty()) reply("表白+1 |•ω•`)")
         })
         anyOf({
@@ -903,6 +1015,19 @@ cyls.util.weather.day2 无锡
         client = SmartQQClient(callback, qrCodeFile)
         client.start()
         load()
+
+        Thread {
+            while (true) {
+                val timeTillMorning = timeFrom(timeOf(tomorrowName + " 06:00:00", TimeFormat.FULL), Date())
+                sleep(timeTillMorning)
+                data.cylsFriendList.forEach {
+                    val friend = it.friend
+                    if (friend != null) {
+                        client.sendMessageToFriend(friend.userId, "早安|•ω•`)")
+                    }
+                }
+            }
+        }.start()
 
         //为防止请求过多导致服务器启动自我保护
         //群id到群详情映射 将在第一次请求时创建
