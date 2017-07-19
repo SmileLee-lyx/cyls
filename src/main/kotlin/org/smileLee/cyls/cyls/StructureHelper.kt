@@ -2,23 +2,23 @@ package org.smileLee.cyls.cyls
 
 import org.intellij.lang.annotations.*
 
-fun createTree(name: String, runner: (String) -> Unit, init: TreeNode.() -> Unit): TreeNode {
+fun createTree(name: String, runner: (String, Cyls) -> Unit, init: TreeNode.() -> Unit): TreeNode {
     val treeNode = TreeNode(name, runner)
     treeNode.init()
     return treeNode
 }
 
 fun createTree(init: TreeNode.() -> Unit): TreeNode {
-    val treeNode = TreeNode("") {}
+    val treeNode = TreeNode("") { _, _ -> }
     treeNode.init()
     return treeNode
 }
 
-fun TreeNode.childNode(name: String, runner: (String) -> Unit, init: TreeNode.() -> Unit) {
+fun TreeNode.childNode(name: String, runner: (String, Cyls) -> Unit, init: TreeNode.() -> Unit) {
     children.put(name, createTree(name, runner, init))
 }
 
-fun TreeNode.childNode(name: String, runner: (String) -> Unit) {
+fun TreeNode.childNode(name: String, runner: (String, Cyls) -> Unit) {
     children.put(name, TreeNode(name, runner))
 }
 
@@ -28,23 +28,23 @@ fun createVerifier(init: MatchingVerifier.() -> Unit): MatchingVerifier {
     return verifier
 }
 
-fun MatchingVerifier.equal(string: String, runner: (String) -> Unit) {
+fun MatchingVerifier.equal(string: String, runner: (String, Cyls) -> Unit) {
     nodes.add(EqualNode(string, runner))
 }
 
-fun MatchingVerifier.contain(subString: String, runner: (String) -> Unit) {
+fun MatchingVerifier.contain(subString: String, runner: (String, Cyls) -> Unit) {
     nodes.add(ContainNode(subString, runner))
 }
 
-fun MatchingVerifier.containRegex(@Language("RegExp") regex: String, runner: (String) -> Unit) {
+fun MatchingVerifier.containRegex(@Language("RegExp") regex: String, runner: (String, Cyls) -> Unit) {
     nodes.add(ContainRegexNode(regex, runner))
 }
 
-fun MatchingVerifier.regex(@Language("RegExp") regex: String, runner: (String) -> Unit) {
+fun MatchingVerifier.regex(@Language("RegExp") regex: String, runner: (String, Cyls) -> Unit) {
     nodes.add(RegexNode(regex, runner))
 }
 
-fun MatchingVerifier.default(runner: (String) -> Unit) {
+fun MatchingVerifier.default(runner: (String, Cyls) -> Unit) {
     nodes.add(DefaultRunnerNode(runner))
 }
 
@@ -72,49 +72,49 @@ fun MatchingVerifier.containRegexPath(@Language("RegExp") regex: String, init: C
     nodes.add(node)
 }
 
-fun MatchingVerifier.anyOf(init: AnyRunnerNode.() -> Unit, runner: (String) -> Unit) {
+fun MatchingVerifier.anyOf(init: AnyRunnerNode.() -> Unit, runner: (String, Cyls) -> Unit) {
     val node = AnyRunnerNode(ArrayList(), runner)
     node.init()
     nodes.add(node)
 }
 
-fun MatchingVerifier.allOf(init: AllRunnerNode.() -> Unit, runner: (String) -> Unit) {
+fun MatchingVerifier.allOf(init: AllRunnerNode.() -> Unit, runner: (String, Cyls) -> Unit) {
     val node = AllRunnerNode(ArrayList(), runner)
     node.init()
     nodes.add(node)
 }
 
-fun MatchingVerifier.special(matches: (String) -> Boolean, runner: (String) -> Unit) {
+fun MatchingVerifier.special(matches: (String, Cyls) -> Boolean, runner: (String, Cyls) -> Unit) {
     nodes.add(object : RunnerNode {
         override val runner = runner
-        override fun matches(string: String) = matches(string)
+        override fun matches(string: String, cyls: Cyls) = matches(string, cyls)
     })
 }
 
-fun MatchingVerifier.special(verifyAndRun: (String) -> Boolean) {
+fun MatchingVerifier.special(verifyAndRun: (String, Cyls) -> Boolean) {
     nodes.add(object : VerifyNode {
-        override fun matches(string: String) = false
-        override fun verifyAndRun(string: String) = verifyAndRun(string)
+        override fun matches(string: String, cyls: Cyls) = false
+        override fun verifyAndRun(string: String, cyls: Cyls) = verifyAndRun(string, cyls)
     })
 }
 
-fun PathNode.equal(string: String, runner: (String) -> Unit = {}) {
+fun PathNode.equal(string: String, runner: (String, Cyls) -> Unit = { _, _ -> }) {
     children.add(EqualNode(string, runner))
 }
 
-fun PathNode.contain(subString: String, runner: (String) -> Unit = {}) {
+fun PathNode.contain(subString: String, runner: (String, Cyls) -> Unit = { _, _ -> }) {
     children.add(ContainNode(subString, runner))
 }
 
-fun PathNode.containRegex(@Language("RegExp") regex: String, runner: (String) -> Unit = {}) {
+fun PathNode.containRegex(@Language("RegExp") regex: String, runner: (String, Cyls) -> Unit = { _, _ -> }) {
     children.add(ContainRegexNode(regex, runner))
 }
 
-fun PathNode.regex(@Language("RegExp") regex: String, runner: (String) -> Unit = {}) {
+fun PathNode.regex(@Language("RegExp") regex: String, runner: (String, Cyls) -> Unit = { _, _ -> }) {
     children.add(RegexNode(regex, runner))
 }
 
-fun PathNode.default(runner: (String) -> Unit = {}) {
+fun PathNode.default(runner: (String, Cyls) -> Unit = { _, _ -> }) {
     children.add(DefaultRunnerNode(runner))
 }
 
@@ -142,13 +142,13 @@ fun PathNode.containRegexPath(@Language("RegExp") regex: String, init: ContainRe
     children.add(node)
 }
 
-fun PathNode.anyOf(init: AnyRunnerNode.() -> Unit, runner: (String) -> Unit = {}) {
+fun PathNode.anyOf(init: AnyRunnerNode.() -> Unit, runner: (String, Cyls) -> Unit = { _, _ -> }) {
     val node = AnyRunnerNode(ArrayList(), runner)
     node.init()
     children.add(node)
 }
 
-fun PathNode.allOf(init: AllRunnerNode.() -> Unit, runner: (String) -> Unit = {}) {
+fun PathNode.allOf(init: AllRunnerNode.() -> Unit, runner: (String, Cyls) -> Unit = { _, _ -> }) {
     val node = AllRunnerNode(ArrayList(), runner)
     node.init()
     children.add(node)
