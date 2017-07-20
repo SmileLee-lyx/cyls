@@ -611,12 +611,15 @@ cyls.util.weather.day2 无锡
             }
         }
         val commonVerifier = createVerifier {
-            regex("(\\.|…|。|\\[\"face\",\\d+])*晚安(\\.|…|。|\\[\"face\",\\d+])*") { _, cyls ->
+            contain("晚安") { _, cyls ->
                 val hasGreeted = cyls.currentGroup.hasGreeted
                 cyls.currentGroup.addGreeting()
                 if (!hasGreeted) cyls.reply("晚安，好梦|•ω•`)")
             }
-            regex("(\\.|…|。|\\[\"face\",\\d+])*早安?(\\.|…|。|\\[\"face\",\\d+])*") { _, cyls ->
+            anyOf({
+                contain("早安")
+                equal("早")
+            }) { _, cyls ->
                 val hasGreeted = cyls.currentGroup.hasGreeted
                 cyls.currentGroup.addGreeting()
                 if (!hasGreeted) cyls.reply("早|•ω•`)")

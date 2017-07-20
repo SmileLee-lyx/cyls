@@ -3,7 +3,7 @@ package org.smileLee.cyls.cyls
 import com.alibaba.fastjson.annotation.*
 import org.smileLee.cyls.util.*
 
-@JSONType(ignores = arrayOf())
+@JSONType(ignores = arrayOf("cylsFriendFromId", "cylsGroupFromId"))
 class Data(
         var cylsFriendList: ArrayList<CylsFriend> = ArrayList(),
         var cylsGroupList: ArrayList<CylsGroup> = ArrayList()

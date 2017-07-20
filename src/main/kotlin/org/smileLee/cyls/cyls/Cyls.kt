@@ -8,8 +8,21 @@ import com.scienjus.smartqq.model.*
 import org.smileLee.cyls.util.*
 import sun.dc.path.*
 import java.io.*
+import java.util.*
 
 class Cyls {
+    val loggerInfoName = "cylsData/loggerInfo.property"
+    val loggerInfo = File(loggerInfoName)
+    lateinit var loggerFile: File
+
+    fun log(str: String) {
+        println(str)
+        val fos = FileOutputStream(loggerFile, true)
+        val dos = DataOutputStream(fos)
+        dos.write("$str\n".toByteArray())
+        dos.close()
+    }
+
     val MAX_RETRY = 3
     inline fun <T> retry(action: () -> T): T {
         for (retry in 0..MAX_RETRY) {
@@ -38,12 +51,12 @@ class Cyls {
     val currentFriend get() = data._cylsFriendFromId[currentFriendMessage.userId]!!
 
     fun reply(message: String) {
-        println("[${Util.timeName}] [${currentGroup.name}] > $message")
+        log("[${Util.timeName}] [${currentGroup.name}] > $message")
         client.sendMessageToGroup(currentGroupId, message)
     }
 
     fun replyToFriend(message: String) {
-        println("[${Util.timeName}] [${currentFriend.markName}] > $message")
+        log("[${Util.timeName}] [${currentFriend.markName}] > $message")
         client.sendMessageToFriend(currentFriendMessage.userId, message)
     }
 
@@ -55,7 +68,7 @@ class Cyls {
         override fun onMessage(message: Message) {
             if (working) {
                 try {
-                    println("[${Util.timeName}] [私聊] ${getFriendNick(message.userId)}：${message.content}")
+                    log("[${Util.timeName}] [私聊] ${getFriendNick(message.userId)}：${message.content}")
                     currentFriendMessage = message
                     currentGroup
                     currentFriend
@@ -83,7 +96,7 @@ class Cyls {
         override fun onGroupMessage(message: GroupMessage) {
             if (working) {
                 try {
-                    println("[${Util.timeName}] [${getGroupName(message.groupId)}] " +
+                    log("[${Util.timeName}] [${getGroupName(message.groupId)}] " +
                             "${getGroupUserNick(message.groupId, message.userId)}：${message.content}")
                     currentGroupMessage = message
                     currentGroup
@@ -116,10 +129,10 @@ class Cyls {
         }
     }
 
-    val savedFileName = "cylsData/savedFile.txt"
-    val savedFile = File(savedFileName)
-    val qrCodeFileName = "cylsData/qrcode.png"
-    val qrCodeFile = File(qrCodeFileName)
+    private val savedFileName = "cylsData/savedFile.txt"
+    private val savedFile = File(savedFileName)
+    private val qrCodeFileName = "cylsData/qrcode.png"
+    private val qrCodeFile = File(qrCodeFileName)
 
     /**
      * 加载群信息等
@@ -198,9 +211,7 @@ class Cyls {
      * *
      * @return 该消息所在群名称
      */
-    fun getGroupName(id: Long): String {
-        return getGroup(id).name
-    }
+    fun getGroupName(id: Long) = getGroup(id).name
 
     /**
      * 获取群消息所在群
@@ -209,9 +220,7 @@ class Cyls {
      * *
      * @return 该消息所在群
      */
-    fun getGroup(id: Long): CylsGroup {
-        return data.cylsGroupFromId[id]
-    }
+    fun getGroup(id: Long) = data.cylsGroupFromId[id]
 
     /**
      * 获取私聊消息发送者昵称
@@ -270,15 +279,21 @@ class Cyls {
                     else msg += "${wind.getString("dir")}${wind.getString("sc")}级|•ω•`)"
                     reply(msg)
                 }
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 reply("啊呀，真抱歉，查询失败的说，请确认这个地名是国内的城市名……|•ω•`)")
             }
         }
     }
 
-    fun init() {
+    val init: Unit by lazy {
         client = SmartQQClient(callback, qrCodeFile)
         client.start()
         load()
+        val loggerProperties = Properties()
+        loggerProperties.load(FileInputStream(loggerInfo))
+        val currentIndex = (loggerProperties.getProperty("index", "0").toIntOrNull() ?: 0) + 1
+        loggerProperties.setProperty("index", currentIndex.toString())
+        loggerProperties.store(FileOutputStream(loggerInfo), null)
+        loggerFile = File("cylsData/chattingLog_$currentIndex.txt")
     }
 }
