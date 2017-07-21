@@ -138,12 +138,7 @@ class Cyls {
      * 加载群信息等
      */
     fun load() {
-        val file = savedFile
-        val fin = FileInputStream(file)
-        val length = fin.available()
-        val bytes = ByteArray(length)
-        fin.read(bytes)
-        val json = String(bytes)
+        val json = savedFile.readText()
         data = JSON.parseObject(json, Data::class.java)
         working = false   //映射建立完毕前暂停接收消息以避免NullPointerException
         println()
@@ -295,5 +290,6 @@ class Cyls {
         loggerProperties.setProperty("index", currentIndex.toString())
         loggerProperties.store(FileOutputStream(loggerInfo), null)
         loggerFile = File("cylsData/chattingLog_$currentIndex.txt")
+        return@lazy Unit
     }
 }
