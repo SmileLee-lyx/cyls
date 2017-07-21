@@ -103,14 +103,17 @@ cyls.help.sudo
                         null!!
                     }
                     if (cyls.currentFriend.isOwner) {
-                        if (destUser.isOwner) {
-                            cyls.replyToFriend("${destUser.markName}是云裂的主人哦，不能被取消管理员身份…… |•ω•`)")
-                        } else if (destUser.isAdmin) {
-                            cyls.currentFriend.adminLevel = CylsFriend.AdminLevel.NORMAL
-                            cyls.replyToFriend("${destUser.markName}已被取消管理员身份……不过，真的要这样么 |•ω•`)")
-                            cyls.save()
-                        } else {
-                            cyls.replyToFriend("${destUser.markName}并不是管理员啊，主人你是怎么想到这么做的啊…… |•ω•`)")
+                        when {
+                            destUser.isOwner -> cyls.replyToFriend(destUser.markName +
+                                    "是云裂的主人哦，不能被取消管理员身份…… |•ω•`)")
+                            destUser.isAdmin -> {
+                                cyls.currentFriend.adminLevel = CylsFriend.AdminLevel.NORMAL
+                                cyls.replyToFriend(destUser.markName +
+                                        "已被取消管理员身份……不过，真的要这样么 |•ω•`)")
+                                cyls.save()
+                            }
+                            else             -> cyls.replyToFriend(destUser.markName +
+                                    "并不是管理员啊，主人你是怎么想到这么做的啊…… |•ω•`)")
                         }
                     } else {
                         cyls.replyToFriend("你的权限不足哦")
@@ -316,16 +319,20 @@ cyls.help.sudo
                     cyls.replyToFriend("自检完毕\n一切正常哦|•ω•`)")
                 })
                 childNode("test", { _, cyls ->
-                    if (cyls.currentFriend.isOwner) {
-                        cyls.replyToFriend("你是云裂的主人哦|•ω•`)")
-                        cyls.replyToFriend("输入cyls.help.sudo查看……说好的主人呢，" +
-                                "为什么连自己的权限都不知道(╯‵□′)╯︵┴─┴")
-                    } else if (cyls.currentFriend.isAdmin) {
-                        cyls.replyToFriend("你是云裂的管理员呢|•ω•`)")
-                        cyls.replyToFriend("输入cyls.help.sudo来查看你的权限哦|•ω•`)")
-                    } else {
-                        cyls.replyToFriend("你暂时只是个普通成员呢……|•ω•`)")
-                        cyls.replyToFriend("输入cyls.help.sudo来查看你的权限哦|•ω•`)")
+                    when {
+                        cyls.currentFriend.isOwner -> {
+                            cyls.replyToFriend("你是云裂的主人哦|•ω•`)")
+                            cyls.replyToFriend("输入cyls.help.sudo查看……说好的主人呢，" +
+                                    "为什么连自己的权限都不知道(╯‵□′)╯︵┴─┴")
+                        }
+                        cyls.currentFriend.isAdmin -> {
+                            cyls.replyToFriend("你是云裂的管理员呢|•ω•`)")
+                            cyls.replyToFriend("输入cyls.help.sudo来查看你的权限哦|•ω•`)")
+                        }
+                        else                       -> {
+                            cyls.replyToFriend("你暂时只是个普通成员呢……|•ω•`)")
+                            cyls.replyToFriend("输入cyls.help.sudo来查看你的权限哦|•ω•`)")
+                        }
                     }
                 })
                 childNode("say", { str, cyls ->
@@ -508,8 +515,8 @@ cyls.help.util
 更多功能等待你去发现哦|•ω•`)""")
             }) {
                 childNode("sudo", { _, cyls ->
-                    if (cyls.currentFriend.isOwner) {
-                        cyls.replyToFriend("""你可是云裂的主人呢，连这都不知道 |•ω•`)
+                    when {
+                        cyls.currentFriend.isOwner -> cyls.replyToFriend("""你可是云裂的主人呢，连这都不知道 |•ω•`)
 可以让云裂屏蔽与解除屏蔽任何一名成员
 cyls.sudo.ignore/recognize uid
 可以将其他成员设置为云裂的管理员或取消管理员身份
@@ -525,8 +532,7 @@ cyls.sudo.say 要说的话
 还可以终止连接
 cyls.sudo.quit
 看你的权限这么多，你还全忘了 |•ω•`)""")
-                    } else if (cyls.currentFriend.isAdmin) {
-                        cyls.replyToFriend("""你是云裂的管理员，连这都不知道，一看就是新上任的|•ω•`)
+                        cyls.currentFriend.isAdmin -> cyls.replyToFriend("""你是云裂的管理员，连这都不知道，一看就是新上任的|•ω•`)
 可以让云裂屏蔽与解除屏蔽任何一名成员
 cyls.sudo.ignore/recognize uid
 可以进行通讯的中断与恢复
@@ -537,8 +543,7 @@ cyls.sudo.test
 cyls.sudo.check
 可以让云裂说特定的内容
 cyls.sudo.say 要说的话""")
-                    } else {
-                        cyls.replyToFriend("""你是普通成员，权限有限呢|•ω•`)
+                        else                       -> cyls.replyToFriend("""你是普通成员，权限有限呢|•ω•`)
 可以测试自己的权限
 cyls.sudo.test
 可以让云裂自检

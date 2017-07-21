@@ -3,7 +3,6 @@ package org.smileLee.cyls.cyls
 import com.alibaba.fastjson.annotation.*
 import com.scienjus.smartqq.model.*
 import org.ansj.splitWord.analysis.*
-import org.smileLee.cyls.cyls.CylsGroup.*
 import org.smileLee.cyls.util.*
 import org.smileLee.smilescript.expression.controlExpression.*
 import org.smileLee.smilescript.stack.*
@@ -28,10 +27,9 @@ class CylsGroup(
         var repeatFrequency: Double = 0.0,
         var status: ChattingStatus = ChattingStatus.COMMON
 ) {
-
     var group: Group? = null
     var groupInfo: GroupInfo? = null
-    var _groupUsersFromId: HashMap<Long, GroupUser> = HashMap()
+    private var _groupUsersFromId: HashMap<Long, GroupUser> = HashMap()
     val groupUsersFromId = InitSafeMap(_groupUsersFromId) { key ->
         groupInfo?.users?.forEach {
             if (it.uid == key) {
@@ -42,7 +40,7 @@ class CylsGroup(
         null!!
     }
 
-    val messageCount get() = _messageCount
+    private val messageCount get() = _messageCount
     val hasGreeted get() = _greetingCount != 0
     val hot get() = messageCount > MAX_MESSAGE_COUNT
 
@@ -64,12 +62,11 @@ class CylsGroup(
         this.group = group
     }
 
-    val stack = Stack()
+    private val stack = Stack()
     fun calculate(s: String) = Block.parse(s).invoke(stack).toString()
 
     companion object {
         val MAX_MESSAGE_COUNT = 50
-
         val commonCommand = createTree {
             childNode("sudo", { _, cyls ->
                 cyls.reply("""输入
@@ -132,14 +129,17 @@ cyls.help.sudo
                         null!!
                     }
                     if (cyls.currentUser.isOwner) {
-                        if (destUser.isOwner) {
-                            cyls.reply("${cyls.getGroupUserNick(cyls.currentGroupId, uin)}是云裂的主人哦，不能被取消管理员身份…… |•ω•`)")
-                        } else if (destUser.isAdmin) {
-                            cyls.currentUser.adminLevel = CylsFriend.AdminLevel.NORMAL
-                            cyls.reply("${cyls.getGroupUserNick(cyls.currentGroupId, uin)}已被取消管理员身份……不过，真的要这样么 |•ω•`)")
-                            cyls.save()
-                        } else {
-                            cyls.reply("${cyls.getGroupUserNick(cyls.currentGroupId, uin)}并不是管理员啊，主人你是怎么想到这么做的啊…… |•ω•`)")
+                        when {
+                            destUser.isOwner -> cyls.reply(cyls.getGroupUserNick(cyls.currentGroupId, uin) +
+                                    "是云裂的主人哦，不能被取消管理员身份…… |•ω•`)")
+                            destUser.isAdmin -> {
+                                cyls.currentUser.adminLevel = CylsFriend.AdminLevel.NORMAL
+                                cyls.reply(cyls.getGroupUserNick(cyls.currentGroupId, uin) +
+                                        "已被取消管理员身份……不过，真的要这样么 |•ω•`)")
+                                cyls.save()
+                            }
+                            else             -> cyls.reply(cyls.getGroupUserNick(cyls.currentGroupId, uin) +
+                                    "并不是管理员啊，主人你是怎么想到这么做的啊…… |•ω•`)")
                         }
                     } else {
                         cyls.reply("你的权限不足哦")
@@ -345,16 +345,20 @@ cyls.help.sudo
                     cyls.reply("自检完毕\n一切正常哦|•ω•`)")
                 })
                 childNode("test", { _, cyls ->
-                    if (cyls.currentUser.isOwner) {
-                        cyls.reply("你是云裂的主人哦|•ω•`)")
-                        cyls.reply("输入cyls.help.sudo查看……说好的主人呢，" +
-                                "为什么连自己的权限都不知道(╯‵□′)╯︵┴─┴")
-                    } else if (cyls.currentUser.isAdmin) {
-                        cyls.reply("你是云裂的管理员呢|•ω•`)")
-                        cyls.reply("输入cyls.help.sudo来查看你的权限哦|•ω•`)")
-                    } else {
-                        cyls.reply("你暂时只是个普通成员呢……|•ω•`)")
-                        cyls.reply("输入cyls.help.sudo来查看你的权限哦|•ω•`)")
+                    when {
+                        cyls.currentUser.isOwner -> {
+                            cyls.reply("你是云裂的主人哦|•ω•`)")
+                            cyls.reply("输入cyls.help.sudo查看……说好的主人呢，" +
+                                    "为什么连自己的权限都不知道(╯‵□′)╯︵┴─┴")
+                        }
+                        cyls.currentUser.isAdmin -> {
+                            cyls.reply("你是云裂的管理员呢|•ω•`)")
+                            cyls.reply("输入cyls.help.sudo来查看你的权限哦|•ω•`)")
+                        }
+                        else                     -> {
+                            cyls.reply("你暂时只是个普通成员呢……|•ω•`)")
+                            cyls.reply("输入cyls.help.sudo来查看你的权限哦|•ω•`)")
+                        }
                     }
                 })
                 childNode("say", { str, cyls ->
@@ -503,25 +507,51 @@ cyls.help.util
                 childNode("random", { str, cyls ->
                     val x = str.toIntOrNull()
                     when (x) {
-                        null                -> {
-                            cyls.reply("还有这种骰子? |•ω•`)")
+                        null                 -> {
+                            val y = str.toDoubleOrNull()
+                            if (y == null) {
+                                cyls.reply("还有这种骰子?tan π/2 |•ω•`)")
+                            } else {
+                                cyls.reply("小数面的骰子啊|•ω•`)\n然而我的创造力是无穷的")
+                                cyls.reply("结果是：${y * Math.random()}")
+                            }
                             null!!
                         }
-                        in Int.MIN_VALUE..1 -> {
-                            cyls.reply("我这里可没有你要的面数的骰子|•ω•`)\n然而我可以现做一个")
+                        in Int.MIN_VALUE..-1 -> {
+                            cyls.reply("我这里可没有负数面的骰子|•ω•`)\n然而我可以做一个假的")
+                            cyls.reply("这可不是普通的${-x}面骰子|•ω•`)")
+                            sleep(200)
+                            cyls.reply("结果是：${Util.randomInt(x) + Util.sign(x)}")
                         }
-                        2                   -> {
+                        0                    -> {
+                            cyls.reply("看，这是一个无穷小的点，它没有表面|•ω•`)")
+                        }
+                        1                    -> {
+                            cyls.reply("你给我一颗弹珠做什么|•ω•`)")
+                            sleep(200)
+                            cyls.reply("结果是……还能是什么")
+                        }
+                        2                    -> {
                             cyls.reply("这么重要的事情，你却抛硬币决定|•ω•`)")
+                            sleep(200)
+                            cyls.reply("结果是${if (Util.randomInt(2) == 0) "正" else "反"}面朝上哦")
                         }
-                        6                   -> {
+                        6                    -> {
                             cyls.reply("人生有许多精彩，有些人却寄希望于这枚普通的六面体骰子|•ω•`)")
+                            sleep(200)
+                            cyls.reply("结果是：${Util.randomInt(x) + 1}")
                         }
-                        else                -> {
+                        4, 8, 10, 12, 20     -> {
                             cyls.reply("有的人已经不满足于六面体骰子了，他们需要一个${x}面体的骰子|•ω•`)")
+                            sleep(200)
+                            cyls.reply("结果是：${Util.randomInt(x) + 1}")
+                        }
+                        else                 -> {
+                            cyls.reply("没见过这种${x}面体的骰子啊，让我来试着做一个|•ω•`)")
+                            sleep(200)
+                            cyls.reply("结果是：${Util.randomInt(x) + 1}")
                         }
                     }
-                    sleep(200)
-                    cyls.reply("结果是：${Util.randomInt(x) + Util.sign(x)}")
                 })
                 childNode("cal", { str, cyls ->
                     val expression = str.replace("&gt;", ">").replace("&lt;", "<")
@@ -537,8 +567,8 @@ cyls.help.util
 更多功能等待你去发现哦|•ω•`)""")
             }) {
                 childNode("sudo", { _, cyls ->
-                    if (cyls.currentUser.isOwner) {
-                        cyls.reply("""你可是云裂的主人呢，连这都不知道 |•ω•`)
+                    when {
+                        cyls.currentUser.isOwner -> cyls.reply("""你可是云裂的主人呢，连这都不知道 |•ω•`)
 可以让云裂屏蔽与解除屏蔽任何一名成员
 cyls.sudo.ignore/recognize uid
 可以将其他成员设置为云裂的管理员或取消管理员身份
@@ -554,8 +584,7 @@ cyls.sudo.say 要说的话
 还可以终止连接
 cyls.sudo.quit
 看你的权限这么多，你还全忘了 |•ω•`)""")
-                    } else if (cyls.currentUser.isAdmin) {
-                        cyls.reply("""你是云裂的管理员，连这都不知道，一看就是新上任的|•ω•`)
+                        cyls.currentUser.isAdmin -> cyls.reply("""你是云裂的管理员，连这都不知道，一看就是新上任的|•ω•`)
 可以让云裂屏蔽与解除屏蔽任何一名成员
 cyls.sudo.ignore/recognize uid
 可以进行通讯的中断与恢复
@@ -566,8 +595,7 @@ cyls.sudo.test
 cyls.sudo.check
 可以让云裂说特定的内容
 cyls.sudo.say 要说的话""")
-                    } else {
-                        cyls.reply("""你是普通成员，权限有限呢|•ω•`)
+                        else                     -> cyls.reply("""你是普通成员，权限有限呢|•ω•`)
 可以测试自己的权限
 cyls.sudo.test
 可以让云裂自检
@@ -666,7 +694,7 @@ cyls.util.weather.day2 无锡
                 }
                 default { str, cyls ->
                     val result = ToAnalysis.parse(str)
-                    if (result.filter { it.realName == "云裂" || it.realName == "穿云裂石" }.isNotEmpty())
+                    if (result.any { it.realName == "云裂" || it.realName == "穿云裂石" })
                         cyls.reply("叫我做什么|•ω•`)")
                 }
             }
@@ -674,7 +702,7 @@ cyls.util.weather.day2 无锡
                 val result = ToAnalysis.parse(str)
                 if (str.matches(".*表白云裂.*".toRegex()))
                     cyls.reply("表白${cyls.getGroupUserNick(cyls.currentGroupMessage.groupId, cyls.currentGroupMessage.userId)}|•ω•`)")
-                else if (result.filter { it.realName == "表白" }.isNotEmpty()) cyls.reply("表白+1 |•ω•`)")
+                else if (result.any { it.realName == "表白" }) cyls.reply("表白+1 |•ω•`)")
             })
             anyOf({
                 contain("什么操作")
@@ -705,7 +733,6 @@ cyls.util.weather.day2 无锡
                     mohaExpertVerifier.findAndRun(str, cyls)
             }
         }
-
         private val commonMohaVerifier = createVerifier {
             anyOf({
                 contain("大新闻")
@@ -748,7 +775,6 @@ cyls.util.weather.day2 无锡
                 cyls.reply("富贵，无相忘|•ω•`)")
             }
         }
-
         private val mohaExpertVerifier = createVerifier {
             anyOf({
                 contain("大新闻")
