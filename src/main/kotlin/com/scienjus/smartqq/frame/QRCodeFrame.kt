@@ -1,6 +1,7 @@
 package com.scienjus.smartqq.frame
 
 import java.awt.*
+import java.io.*
 import javax.swing.*
 
 /**
@@ -12,7 +13,6 @@ import javax.swing.*
 
 class QRCodeFrame : JFrame() {
     private val label: JLabel
-    private var icon: ImageIcon? = null
 
     //创建窗体时进行初始化
     init {
@@ -39,7 +39,7 @@ class QRCodeFrame : JFrame() {
 
     //显示二维码
     fun showQRCode(filePath: String) {
-        icon = ImageIcon(filePath)
+        val icon = ImageIcon(File(filePath).readBytes())
         label.text = null
         label.icon = icon //二维码大小为165*165
     }
