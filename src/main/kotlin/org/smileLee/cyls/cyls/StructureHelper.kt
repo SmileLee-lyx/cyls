@@ -48,30 +48,6 @@ fun MatchingVerifier.default(runner: (String, Cyls) -> Unit) {
     nodes.add(DefaultRunnerNode(runner))
 }
 
-fun MatchingVerifier.equalPath(string: String, init: EqualPathNode.() -> Unit) {
-    val node = EqualPathNode(string, ArrayList())
-    node.init()
-    nodes.add(node)
-}
-
-fun MatchingVerifier.containPath(subString: String, init: ContainPathNode.() -> Unit) {
-    val node = ContainPathNode(subString, ArrayList())
-    node.init()
-    nodes.add(node)
-}
-
-fun MatchingVerifier.regexPath(@Language("RegExp") regex: String, init: RegexPathNode.() -> Unit) {
-    val node = RegexPathNode(regex, ArrayList())
-    node.init()
-    nodes.add(node)
-}
-
-fun MatchingVerifier.containRegexPath(@Language("RegExp") regex: String, init: ContainRegexPathNode.() -> Unit) {
-    val node = ContainRegexPathNode(regex, ArrayList())
-    node.init()
-    nodes.add(node)
-}
-
 fun MatchingVerifier.anyOf(init: AnyRunnerNode.() -> Unit, runner: (String, Cyls) -> Unit) {
     val node = AnyRunnerNode(ArrayList(), runner)
     node.init()
@@ -118,30 +94,6 @@ fun PathNode.default(runner: (String, Cyls) -> Unit = { _, _ -> }) {
     children.add(DefaultRunnerNode(runner))
 }
 
-fun PathNode.equalPath(string: String, init: EqualPathNode.() -> Unit) {
-    val node = EqualPathNode(string, ArrayList())
-    node.init()
-    children.add(node)
-}
-
-fun PathNode.containPath(subString: String, init: ContainPathNode.() -> Unit) {
-    val node = ContainPathNode(subString, ArrayList())
-    node.init()
-    children.add(node)
-}
-
-fun PathNode.regexPath(@Language("RegExp") regex: String, init: RegexPathNode.() -> Unit) {
-    val node = RegexPathNode(regex, ArrayList())
-    node.init()
-    children.add(node)
-}
-
-fun PathNode.containRegexPath(@Language("RegExp") regex: String, init: ContainRegexPathNode.() -> Unit) {
-    val node = ContainRegexPathNode(regex, ArrayList())
-    node.init()
-    children.add(node)
-}
-
 fun PathNode.anyOf(init: AnyRunnerNode.() -> Unit, runner: (String, Cyls) -> Unit = { _, _ -> }) {
     val node = AnyRunnerNode(ArrayList(), runner)
     node.init()
@@ -152,4 +104,15 @@ fun PathNode.allOf(init: AllRunnerNode.() -> Unit, runner: (String, Cyls) -> Uni
     val node = AllRunnerNode(ArrayList(), runner)
     node.init()
     children.add(node)
+}
+
+class ArrayListHelper<T> : ArrayList<T>() {
+    operator fun T.unaryPlus() {
+        add(this@unaryPlus)
+    }
+}
+
+inline fun <reified T> arrayOf(elements: ArrayListHelper<T>.() -> Unit): Array<T> {
+    val arrayList = ArrayListHelper<T>().apply(elements)
+    return Array(arrayList.size) { arrayList[it] }
 }

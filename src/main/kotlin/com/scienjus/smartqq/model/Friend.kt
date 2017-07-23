@@ -21,7 +21,6 @@ class Friend {
 
     var vipLevel = 0
 
-    override fun toString(): String {
-        return "Friend{userId=$userId, markname='$markname', nickname='$nickname', vip=$isVip, vipLevel=$vipLevel}"
-    }
+    override fun toString() =
+            "Friend{userId=$userId, markname='$markname', nickname='$nickname', vip=$isVip, vipLevel=$vipLevel}"
 }

@@ -1,5 +1,7 @@
 package com.scienjus.smartqq.model
 
+import com.alibaba.fastjson.annotation.*
+
 /**
  * 最近会话.
 
@@ -11,7 +13,8 @@ package com.scienjus.smartqq.model
  */
 class Recent {
 
-    var uin: Long = 0
+    @JSONField(name = "uin")
+    var userId: Long = 0
 
     //0:好友、1:群、2:讨论组
     var type: Int = 0

@@ -10,10 +10,10 @@ import sun.dc.path.*
 import java.io.*
 import java.util.*
 
-class Cyls {
-    val loggerInfoName = "cylsData/loggerInfo.property"
-    val loggerInfo = File(loggerInfoName)
-    lateinit var loggerFile: File
+class Cyls(loggerInfoName: String) {
+    private val loggerInfo = File(loggerInfoName)
+    private lateinit var ownerName: String
+    private lateinit var loggerFile: File
 
     fun log(str: String) {
         println(str)
@@ -23,8 +23,8 @@ class Cyls {
         dos.close()
     }
 
-    val MAX_RETRY = 3
-    inline fun <T> retry(action: () -> T): T {
+    private val MAX_RETRY = 3
+    inline private fun <T> retry(action: () -> T): T {
         for (retry in 0..MAX_RETRY) {
             try {
                 return action()
@@ -46,25 +46,17 @@ class Cyls {
     var currentGroupMessage: GroupMessage = GroupMessage()
     var currentFriendMessage: Message = Message()
     val currentGroupId get() = currentGroupMessage.groupId
+    val currentGroupUserId get() = currentGroupMessage.userId
+    val currentFriendId get() = currentFriendMessage.userId
     val currentGroup get() = data._cylsGroupFromId[currentGroupMessage.groupId]!!
-    val currentUser get() = data._cylsFriendFromId[currentGroupMessage.userId]!!
+    val currentGroupUser get() = data._cylsFriendFromId[currentGroupMessage.userId]!!
     val currentFriend get() = data._cylsFriendFromId[currentFriendMessage.userId]!!
-
-    fun reply(message: String) {
-        log("[${Util.timeName}] [${currentGroup.name}] > $message")
-        client.sendMessageToGroup(currentGroupId, message)
-    }
-
-    fun replyToFriend(message: String) {
-        log("[${Util.timeName}] [${currentFriend.markName}] > $message")
-        client.sendMessageToFriend(currentFriendMessage.userId, message)
-    }
 
     /**
      * SmartQQ客户端
      */
     lateinit var client: SmartQQClient
-    val callback = object : MessageCallback {
+    private val callback = object : MessageCallback {
         override fun onMessage(message: Message) {
             if (working) {
                 try {
@@ -76,12 +68,12 @@ class Cyls {
                         val order = Util.readOrder(message.content.substring(5))
                         currentFriend.status.commandTree.findPath(order.path).run(order.message, this@Cyls)
                     } catch (e: PathException) {
-                        reply("请确保输入了正确的指令哦|•ω•`)")
+                        currentFriendReplier.reply("请确保输入了正确的指令哦|•ω•`)")
                     } else {
-                        if (!currentUser.isIgnored) {
-                            if (currentUser.isRepeated) {
-                                Util.runByChance(currentUser.repeatFrequency) {
-                                    reply(message.content)
+                        if (!currentGroupUser.isIgnored) {
+                            if (currentGroupUser.isRepeated) {
+                                Util.runByChance(currentGroupUser.repeatFrequency) {
+                                    currentFriendReplier.reply(message.content)
                                 }
                             } else {
                                 currentFriend.status.replyVerifier.findAndRun(message.content, this@Cyls)
@@ -100,26 +92,25 @@ class Cyls {
                             "${getGroupUserNick(message.groupId, message.userId)}：${message.content}")
                     currentGroupMessage = message
                     currentGroup
-                    currentUser
+                    currentGroupUser
                     if (message.content.startsWith("cyls.")) try {
                         val order = Util.readOrder(message.content.substring(5))
                         currentGroup.status.commandTree.findPath(order.path).run(order.message, this@Cyls)
                     } catch (e: PathException) {
-                        reply("请确保输入了正确的指令哦|•ω•`)")
+                        currentGroupReplier.reply("请确保输入了正确的指令哦|•ω•`)")
                     } else {
-                        if (!currentGroup.isPaused && !currentUser.isIgnored && !currentGroup.hot
+                        if (!currentGroup.isPaused && !currentGroupUser.isIgnored && !currentGroup.hot
                                 && getGroupUserNick(message.groupId, message.userId) != "系统消息") {
                             currentGroup.addMessage()
-                            if (currentUser.isRepeated) {
-                                Util.runByChance(currentUser.repeatFrequency) {
-                                    reply(message.content)
+                            when {
+                                currentGroupUser.isRepeated -> Util.runByChance(currentGroupUser.repeatFrequency) {
+                                    currentGroupReplier.reply(message.content)
                                 }
-                            } else if (currentGroup.isRepeated) {
-                                Util.runByChance(currentGroup.repeatFrequency) {
-                                    reply(message.content)
+                                currentGroup.isRepeated     -> Util.runByChance(currentGroup.repeatFrequency) {
+                                    currentGroupReplier.reply(message.content)
                                 }
-                            } else {
-                                currentGroup.status.replyVerifier.findAndRun(message.content, this@Cyls)
+                                else                        -> currentGroup.status.replyVerifier
+                                        .findAndRun(message.content, this@Cyls)
                             }
                         }
                     }
@@ -159,7 +150,7 @@ class Cyls {
             groupList.forEach { group ->
                 data.cylsGroupList.filter { cylsGroup -> cylsGroup.name == group.name }
                         .forEach { cylsGroup -> cylsGroup.set(group) }
-                data.cylsGroupFromId[group.id].set(group)
+                data.cylsGroupFromId[group.groupId].set(group)
             }
         }
         println("[${Util.timeName}] 建立群列表索引成功。")
@@ -186,69 +177,74 @@ class Cyls {
     /**
      * 获取群id对应群详情
 
-     * @param id 被查询的群id
+     * @param groupId 被查询的群id
      * *
      * @return 该群详情
      */
-    fun getGroupInfoFromID(id: Long): GroupInfo {
-        val cylsGroup = data.cylsGroupFromId[id]
+    fun getGroupInfoFromID(groupId: Long): GroupInfo {
+        val cylsGroup = data.cylsGroupFromId[groupId]
         return if (cylsGroup.groupInfo != null) cylsGroup.groupInfo!! else {
-            val groupInfo = client.getGroupInfo(cylsGroup.group?.code ?: throw RuntimeException())
-            cylsGroup.groupInfo = groupInfo
-            groupInfo
+            client.getGroupInfo(cylsGroup.group!!.code).apply { cylsGroup.groupInfo = this@apply }
         }
     }
 
     /**
-     * 获取群消息所在群名称
-
-     * @param id 被查询的群消息
-     * *
-     * @return 该消息所在群名称
+     * 获取群id对应群
      */
-    fun getGroupName(id: Long) = getGroup(id).name
+    fun getGroup(groupId: Long): CylsGroup {
+        val cylsGroup = data.cylsGroupFromId[groupId]
+        return if (cylsGroup.groupInfo != null) cylsGroup else {
+            cylsGroup.apply { this@apply.groupInfo = client.getGroupInfo(cylsGroup.group!!.code) }
+        }
+    }
 
     /**
-     * 获取群消息所在群
-
-     * @param id 被查询的群消息
-     * *
-     * @return 该消息所在群
+     * 获取群id对应群名称
+     *
+     * @param groupId 被查询的群id
+     *
+     * @return 该群名称
      */
-    fun getGroup(id: Long) = data.cylsGroupFromId[id]
+    fun getGroupName(groupId: Long) = getGroup(groupId).name
+
+    fun getFriend(userId: Long) = data.cylsFriendFromId[userId]
+
+    /**
+     * 获取好友id对应的好友昵称
+     *
+     * @param userId 被查询的好友id
+     *
+     * @return 该消息发送者
+     */
+    fun getFriendNick(userId: Long) = getFriendNick(getFriend(userId))
 
     /**
      * 获取私聊消息发送者昵称
-
-     * @param id 被查询的私聊消息
-     * *
-     * @return 该消息发送者
+     *
+     * @param groupId 被查询的群id
+     * @param userId 被查询的群成员id
+     *
+     * @return 该消息发送者的群名片
      */
-    fun getFriendNick(id: Long): String {
-        val user = data.cylsFriendFromId[id].friend
-        return user?.markname ?: user?.nickname ?: null!!
+    fun getGroupUserNick(groupId: Long, userId: Long): String {
+        getGroupInfoFromID(groupId)
+        return getGroupUserNick(data.cylsGroupFromId[groupId], userId)
     }
 
-    fun getGroupUserNick(gid: Long, uid: Long): String {
-        getGroupInfoFromID(gid)
-        val user = data.cylsGroupFromId[gid].groupUsersFromId[uid]
-        return user.card ?: user.nick
-    }
-
-    private val weatherKey = "3511aebb46e04a59b77da9b1c648c398"               //天气查询密钥
+    private lateinit var weatherKey: String               //天气查询密钥
     private val weatherUrl = ApiURL("https://free-api.heweather.com/v5/forecast?city={1}&key={2}", "")
 
     /**
      * @param cityName 查询的城市名
      * @param d        0=今天 1=明天 2=后天
      */
-    fun getWeather(cityName: String, d: Int) {
+    fun getWeather(cityName: String, d: Int, replier: Replier) {
         val actualCityName = cityName.replace("[ 　\t\n]".toRegex(), "")
         if (actualCityName == "") {
-            reply("请输入城市名称进行查询哦|•ω•`)")
+            replier.reply("请输入城市名称进行查询哦|•ω•`)")
         } else {
             val days = arrayOf("今天", "明天", "后天")
-            reply("云裂天气查询服务|•ω•`)\n下面查询$actualCityName${days[d]}的天气:")
+            replier.reply("云裂天气查询服务|•ω•`)\n下面查询$actualCityName${days[d]}的天气:")
             var msg = ""
             val web = weatherUrl.buildUrl(actualCityName, weatherKey)
             try {
@@ -257,39 +253,83 @@ class Cyls {
                 val weatherData = weather.getJSONArray("HeWeather5").getJSONObject(0)
                 val basic = weatherData.getJSONObject("basic")
                 if (basic == null) {
-                    reply("啊呀，真抱歉，查询失败的说，请确认这个地名是国内的城市名……|•ω•`)")
+                    replier.reply("啊呀，真抱歉，查询失败的说，请确认这个地名是国内的城市名……|•ω•`)")
                 } else {
                     val forecast = weatherData.getJSONArray("daily_forecast")
                     val day = forecast.getJSONObject(d)
                     val cond = day.getJSONObject("cond")
-                    if (cond.getString("txt_d") == cond.getString("txt_n")) {
-                        msg += "全天${cond.getString("txt_d")},\n"
+                    msg += if (cond.getString("txt_d") == cond.getString("txt_n")) {
+                        "全天${cond.getString("txt_d")},\n"
                     } else {
-                        msg += "白天${cond.getString("txt_d")}，夜晚${cond.getString("txt_n")}，\n"
+                        "白天${cond.getString("txt_d")}，夜晚${cond.getString("txt_n")}，\n"
                     }
                     val tmp = day.getJSONObject("tmp")
                     msg += "最高温${tmp.getString("max")}℃，最低温${tmp.getString("min")}℃，\n"
                     val wind = day.getJSONObject("wind")
-                    if (wind.getString("sc") == "微风") msg += "微${wind.getString("dir")}|•ω•`)"
-                    else msg += "${wind.getString("dir")}${wind.getString("sc")}级|•ω•`)"
-                    reply(msg)
+                    msg += if (wind.getString("sc") == "微风") "微${wind.getString("dir")}|•ω•`)"
+                    else "${wind.getString("dir")}${wind.getString("sc")}级|•ω•`)"
+                    replier.reply(msg)
                 }
             } catch (e: Exception) {
-                reply("啊呀，真抱歉，查询失败的说，请确认这个地名是国内的城市名……|•ω•`)")
+                replier.reply("啊呀，真抱歉，查询失败的说，请确认这个地名是国内的城市名……|•ω•`)")
             }
         }
     }
 
-    val init: Unit by lazy {
+    private fun setupLogger() = Properties().apply {
+        load(loggerInfo.inputStream())
+        ownerName = getProperty("owner")
+        weatherKey = getProperty("weatherKey")
+        val currentIndex = (getProperty("index", "0").toIntOrNull() ?: 0) + 1
+        setProperty("index", currentIndex.toString())
+        store(loggerInfo.outputStream(), "")
+        loggerFile = File("cylsData/chattingLog_$currentIndex.txt")
+    }
+
+    val init by lazy {
         client = SmartQQClient(callback, qrCodeFile)
         client.start()
+        setupLogger()
         load()
-        val loggerProperties = Properties()
-        loggerProperties.load(FileInputStream(loggerInfo))
-        val currentIndex = (loggerProperties.getProperty("index", "0").toIntOrNull() ?: 0) + 1
-        loggerProperties.setProperty("index", currentIndex.toString())
-        loggerProperties.store(FileOutputStream(loggerInfo), null)
-        loggerFile = File("cylsData/chattingLog_$currentIndex.txt")
-        return@lazy Unit
+    }
+
+    val currentGroupReplier = object : Replier {
+        override fun reply(message: String) {
+            log("[${Util.timeName}] [${currentGroup.name}] > $message")
+            client.sendMessageToGroup(currentGroupId, message)
+        }
+    }
+
+    val currentFriendReplier = object : Replier {
+        override fun reply(message: String) {
+            log("[${Util.timeName}] [私聊] [${currentFriend.markName}] > $message")
+            client.sendMessageToFriend(currentFriendId, message)
+        }
+    }
+
+    inner class replierToGroup(private val group: CylsGroup) : Replier {
+        override fun reply(message: String) {
+            log("[${Util.timeName}] [${group.name}] > $message")
+            client.sendMessageToGroup(group.group!!.groupId, message)
+        }
+
+        constructor(groupId: Long) : this(getGroup(groupId))
+    }
+
+    inner class replierToFriend(private val friend: CylsFriend) : Replier {
+        override fun reply(message: String) {
+            log("[${Util.timeName}] [私聊] [${friend.markName}] > $message")
+            client.sendMessageToFriend(friend.friend!!.userId, message)
+        }
+
+        constructor(userId: Long) : this(getFriend(userId))
+    }
+
+    companion object {
+        fun getFriendNick(friend: CylsFriend): String = friend.markName
+        fun getGroupUserNick(group: CylsGroup, userId: Long): String {
+            val user = group.groupUsersFromId[userId]
+            return user.card ?: user.nick
+        }
     }
 }

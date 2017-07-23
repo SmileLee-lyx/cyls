@@ -1,5 +1,6 @@
 package com.scienjus.smartqq.model
 
+import com.alibaba.fastjson.annotation.*
 import java.util.*
 
 /**
@@ -13,7 +14,8 @@ import java.util.*
  */
 class GroupInfo {
 
-    var gid = 0L
+    @JSONField(name = "gid")
+    var groupId = 0L
 
     var createtime = 0L
 

@@ -1,5 +1,7 @@
 package com.scienjus.smartqq.model
 
+import com.alibaba.fastjson.annotation.*
+
 /**
  * 讨论组成员.
 
@@ -11,7 +13,8 @@ package com.scienjus.smartqq.model
  */
 class DiscussUser {
 
-    var uin: Long = 0
+    @JSONField(name = "uin")
+    var userId: Long = 0
 
     var nick: String? = null
 
@@ -20,6 +23,6 @@ class DiscussUser {
     var status: String? = null
 
     override fun toString(): String {
-        return "DiscussUser{uin=$uin, nick='$nick', clientType='$clientType', status='$status'}"
+        return "DiscussUser{uin=$userId, nick='$nick', clientType='$clientType', status='$status'}"
     }
 }

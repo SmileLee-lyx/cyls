@@ -14,7 +14,7 @@ import com.alibaba.fastjson.annotation.*
 class Discuss {
 
     @JSONField(name = "did")
-    var id: Long = 0
+    var discussId: Long = 0
 
     var name: String? = null
 }

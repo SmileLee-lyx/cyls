@@ -18,7 +18,7 @@ class Message {
         this.font = cont.getJSONArray(0).getObject(1, Font::class.java)
         val size = cont.size
         val contentBuilder = StringBuilder()
-        for (i in 1..size - 1) {
+        for (i in 1 until size) {
             contentBuilder.append(cont.getString(i))
         }
         this.content = contentBuilder.toString()

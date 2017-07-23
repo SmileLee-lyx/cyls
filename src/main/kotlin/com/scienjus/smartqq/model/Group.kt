@@ -14,7 +14,7 @@ import com.alibaba.fastjson.annotation.*
 class Group {
 
     @JSONField(name = "gid")
-    var id: Long = 0
+    var groupId: Long = 0
 
     var name: String = ""
 

@@ -16,7 +16,7 @@ import java.util.*
 class DiscussInfo {
 
     @JSONField(name = "did")
-    var id: Long = 0
+    var discussId: Long = 0
 
     @JSONField(name = "discu_name")
     var name: String? = null

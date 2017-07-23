@@ -31,7 +31,7 @@ class GroupMessage {
 
         val size = cont.size
         val contentBuilder = StringBuilder()
-        for (i in 1..size - 1) {
+        for (i in 1 until size) {
             contentBuilder.append(cont.getString(i))
         }
         this.content = contentBuilder.toString()

@@ -5,10 +5,9 @@ import com.scienjus.smartqq.callback.*
 import com.scienjus.smartqq.constant.*
 import com.scienjus.smartqq.frame.*
 import com.scienjus.smartqq.model.*
-import com.scienjus.smartqq.model.Category
 import net.dongliu.requests.*
 import net.dongliu.requests.exception.*
-import org.apache.log4j.*
+import org.slf4j.*
 import java.io.*
 import java.net.*
 import java.util.*
@@ -23,7 +22,7 @@ import java.util.*
  * @date 2015/12/18.
  */
 class SmartQQClient @JvmOverloads constructor(
-        val callback: MessageCallback,
+        private val callback: MessageCallback,
         qrCodeFile: File = File("qrcode.png")
 ) : Closeable {
 
@@ -65,7 +64,7 @@ class SmartQQClient @JvmOverloads constructor(
         LOGGER.info(accountInfo.nick!! + "，欢迎！") //登录成功欢迎语
     }
 
-    val runner = Runnable {
+    private val runner = Runnable {
         while (true) {
             if (!pollStarted) {
                 return@Runnable
@@ -209,12 +208,10 @@ class SmartQQClient @JvmOverloads constructor(
         if (array != null) while (i < array.size) {
             val message = array.getJSONObject(i)
             val type = message.getString("poll_type")
-            if ("message" == type) {
-                callback.onMessage(Message(message.getJSONObject("value")))
-            } else if ("group_message" == type) {
-                callback.onGroupMessage(GroupMessage(message.getJSONObject("value")))
-            } else if ("discu_message" == type) {
-                callback.onDiscussMessage(DiscussMessage(message.getJSONObject("value")))
+            when (type) {
+                "message"       -> callback.onMessage(Message(message.getJSONObject("value")))
+                "group_message" -> callback.onGroupMessage(GroupMessage(message.getJSONObject("value")))
+                "discu_message" -> callback.onDiscussMessage(DiscussMessage(message.getJSONObject("value")))
             }
             i++
         }
@@ -361,7 +358,7 @@ class SmartQQClient @JvmOverloads constructor(
 
      * @return
      */
-    val accountInfo: UserInfo
+    private val accountInfo: UserInfo
         get() {
             LOGGER.debug("开始获取登录用户信息")
 
@@ -400,86 +397,6 @@ class SmartQQClient @JvmOverloads constructor(
         }
 
     /**
-     * 获得qq号
-
-     * @param friendId 用户id
-     * *
-     * @return
-     */
-    fun getQQById(friendId: Long): Long {
-        LOGGER.debug("开始获取QQ号")
-
-        val response = get(ApiURL.GET_QQ_BY_ID, friendId, vfwebqq)
-        return getJsonObjectResult(response).getLongValue("account")
-    }
-
-    /**
-     * 获得好友的qq号
-
-     * @param friend 好友对象
-     * *
-     * @return
-     */
-    fun getQQById(friend: Friend): Long {
-        return getQQById(friend.userId)
-    }
-
-    /**
-     * 获得群友的qq号
-
-     * @param user 群友对象
-     * *
-     * @return
-     */
-    fun getQQById(user: GroupUser): Long {
-        return getQQById(user.uid)
-    }
-
-    /**
-     * 获得讨论组成员的qq号
-
-     * @param user 讨论组成员对象
-     * *
-     * @return
-     */
-    fun getQQById(user: DiscussUser): Long {
-        return getQQById(user.uin)
-    }
-
-    /**
-     * 获得私聊消息发送者的qq号
-
-     * @param msg 私聊消息
-     * *
-     * @return
-     */
-    fun getQQById(msg: Message): Long {
-        return getQQById(msg.userId)
-    }
-
-    /**
-     * 获得群消息发送者的qq号
-
-     * @param msg 群消息
-     * *
-     * @return
-     */
-    fun getQQById(msg: GroupMessage): Long {
-        return getQQById(msg.userId)
-    }
-
-    /**
-     * 获得讨论组消息发送者的qq号
-
-     * @param msg 讨论组消息
-     * *
-     * @return
-     */
-    fun getQQById(msg: DiscussMessage): Long {
-        return getQQById(msg.userId)
-    }
-
-    /**
      * 获得登录状态
 
      * @return
@@ -512,7 +429,7 @@ class SmartQQClient @JvmOverloads constructor(
             var i = 0
             while (minfo != null && i < minfo.size) {
                 val groupUser = minfo.getObject(i, GroupUser::class.java)
-                groupUserMap.put(groupUser.uid, groupUser)
+                groupUserMap.put(groupUser.userId, groupUser)
                 groupInfo.addUser(groupUser)
                 i++
             }
@@ -569,7 +486,7 @@ class SmartQQClient @JvmOverloads constructor(
             var i = 0
             while (minfo != null && i < minfo.size) {
                 val discussUser = minfo.getObject(i, DiscussUser::class.java)
-                discussUserMap.put(discussUser.uin, discussUser)
+                discussUserMap.put(discussUser.userId, discussUser)
                 discussInfo.addUser(discussUser)
                 i++
             }
@@ -618,9 +535,7 @@ class SmartQQClient @JvmOverloads constructor(
     }
 
     //hash加密方法
-    private fun hash(): String {
-        return hash(uin, ptwebqq)
-    }
+    private fun hash() = hash(uin, ptwebqq)
 
     @Throws(IOException::class)
     override fun close() {
@@ -631,7 +546,7 @@ class SmartQQClient @JvmOverloads constructor(
     companion object {
 
         //日志
-        private val LOGGER = Logger.getLogger(SmartQQClient::class.java)
+        private val LOGGER = LoggerFactory.getLogger(SmartQQClient::class.java)
 
         //消息id，这个好像可以随便设置，所以设成全局的
         private var MESSAGE_ID: Long = 43690001
@@ -691,14 +606,10 @@ class SmartQQClient @JvmOverloads constructor(
         }
 
         //获取返回json的result字段（JSONObject类型）
-        private fun getJsonObjectResult(response: Response<String>): JSONObject {
-            return getResponseJson(response).getJSONObject("result")
-        }
+        private fun getJsonObjectResult(response: Response<String>) = getResponseJson(response).getJSONObject("result")
 
         //获取返回json的result字段（JSONArray类型）
-        private fun getJsonArrayResult(response: Response<String>): JSONArray? {
-            return getResponseJson(response).getJSONArray("result")
-        }
+        private fun getJsonArrayResult(response: Response<String>) = getResponseJson(response).getJSONArray("result")
 
         //检查消息是否发送成功
         private fun checkSendMsgResult(response: Response<String>) {
@@ -745,7 +656,7 @@ class SmartQQClient @JvmOverloads constructor(
         //hash加密方法
         private fun hash(x: Long, K: String): String {
             val N = IntArray(4)
-            for (T in 0..K.length - 1) {
+            for (T in 0 until K.length) {
                 N[T % 4] = N[T % 4] xor K[T].toInt()
             }
             val U = arrayOf("EC", "OK")

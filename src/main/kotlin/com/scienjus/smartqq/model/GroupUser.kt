@@ -16,7 +16,7 @@ class GroupUser {
     var province = ""
     var gender = ""
     @JSONField(name = "uin")
-    var uid = 0L
+    var userId = 0L
     var country = ""
     var city = ""
     var card: String? = null

@@ -20,8 +20,8 @@ class UserInfo {
     var occupation: String? = null
 
     var college: String? = null
-
-    var uin: String? = null
+    @JSONField(name = "uin")
+    var userId: String? = null
 
     var blood: Int = 0
 

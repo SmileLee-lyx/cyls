@@ -14,7 +14,7 @@ import com.alibaba.fastjson.annotation.*
 class FriendStatus {
 
     @JSONField(name = "uin")
-    var uin: Long = 0
+    var userId: Long = 0
 
     var status: String? = null
 

@@ -25,7 +25,7 @@ class Data(
     }
     val cylsGroupFromId = InitSafeMap(_cylsGroupFromId) { key ->
         for (it in cylsGroupList) {
-            if (it.group?.id == key) {
+            if (it.group?.groupId == key) {
                 _cylsGroupFromId.put(key, it)
                 return@InitSafeMap it
             }

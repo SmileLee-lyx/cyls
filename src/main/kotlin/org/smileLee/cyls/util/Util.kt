@@ -18,7 +18,8 @@ object Util {
      */
     fun getTimeName(format: String, time: Date = Date()): String = SimpleDateFormat(format).format(time)
 
-    @JvmOverloads fun getTimeName(format: TimeFormat, time: Date = Date()) = getTimeName(format.format, time)
+    @JvmOverloads
+    fun getTimeName(format: TimeFormat, time: Date = Date()) = getTimeName(format.format, time)
 
     val fullDay = (24 * 60 * 60 * 1000).toLong()
 
@@ -32,7 +33,7 @@ object Util {
 
     class Order(val path: ArrayList<String>, val message: String)
 
-    fun String.firstIndexOf(vararg char: Char): Int {
+    private fun String.indexOfOrLength(vararg char: Char): Int {
         var ret = length
         fun check(x: Int) = if (x != -1) x else length
         char.forEach {
@@ -48,22 +49,27 @@ object Util {
         var str = string
         val path = ArrayList<String>()
         while (true) {
-            val dotIndex = str.firstIndexOf('.')
-            val blankIndex = str.firstIndexOf(' ', '\n')
-            if (blankIndex == dotIndex) {
-                path.add(str)
-                return Order(path, "")
-            } else if (dotIndex < blankIndex) {
-                path.add(str.substring(0, dotIndex))
-                str = str.substring(dotIndex + 1)
-            } else {
-                path.add(str.substring(0, blankIndex))
-                return Order(path, str.substring(blankIndex + 1))
+            val dotIndex = str.indexOfOrLength('.')
+            val blankIndex = str.indexOfOrLength(' ', '\n')
+            str = when {
+                blankIndex == dotIndex -> {
+                    path.add(str)
+                    return Order(path, "")
+                }
+                blankIndex > dotIndex  -> {
+                    path.add(str.substring(0, dotIndex))
+                    str.substring(dotIndex + 1)
+                }
+                else                   -> {
+                    path.add(str.substring(0, blankIndex))
+                    return Order(path, str.substring(blankIndex + 1))
+                }
             }
         }
     }
 
-    fun randomInt(x: Int) = (Math.random() * x).toInt()
+    fun randomInt(x: Int = 2) = (Math.random() * x).toInt()
+    val randomBool get() = Math.random() >= 0.5
     fun sign(x: Int) = if (x > 0) 1 else if (x < 0) -1 else 0
 
     inline fun runByChance(chance: Double, action: () -> Unit) {
