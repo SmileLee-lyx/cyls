@@ -1,6 +1,8 @@
 package com.scienjus.smartqq.callback
 
-import com.scienjus.smartqq.model.*
+import com.scienjus.smartqq.model.DiscussMessage
+import com.scienjus.smartqq.model.GroupMessage
+import com.scienjus.smartqq.model.Message
 
 /**
  * 收到消息的回调

@@ -1,6 +1,6 @@
 package org.smileLee.cyls.util
 
-import java.text.*
+import java.text.SimpleDateFormat
 import java.util.*
 
 object Util {
@@ -87,5 +87,11 @@ object Util {
     fun <T> itemByChance(vararg items: T): T {
         val index = randomInt(items.size)
         return items[index]
+    }
+
+    inline fun doWithLog(message: String, action: () -> Unit) {
+        println("[$timeName] 开始$message...")
+        action()
+        println("[$timeName] ${message}成功。")
     }
 }

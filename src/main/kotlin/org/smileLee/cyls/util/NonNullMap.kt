@@ -1,6 +1,6 @@
 package org.smileLee.cyls.util
 
-import kotlin.collections.MutableMap.*
+import kotlin.collections.MutableMap.MutableEntry
 
 interface NonNullMap<K, V> : MutableMap<K, V>, Iterable<Map.Entry<K, V>> {
     override operator fun get(key: K): V

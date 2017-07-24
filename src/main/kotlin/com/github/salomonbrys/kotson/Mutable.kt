@@ -1,6 +1,8 @@
 package com.github.salomonbrys.kotson
 
-import com.google.gson.*
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 
 operator fun JsonElement.set(key: String, value: Any?) = obj.add(key, value.toJsonElement())
 operator fun JsonElement.set(key: Int, value: Any?): JsonElement?

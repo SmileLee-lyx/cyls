@@ -1,10 +1,13 @@
 package com.github.salomonbrys.kotson
 
-import com.google.gson.*
-import java.math.*
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import java.math.BigDecimal
+import java.math.BigInteger
 import java.util.*
-import kotlin.properties.*
-import kotlin.reflect.*
+import kotlin.properties.ReadWriteProperty
+import kotlin.reflect.KProperty
 
 operator fun JsonObject.getValue(thisRef: Any?, property: KProperty<*>): JsonElement = obj[property.name]
 

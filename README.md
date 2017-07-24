@@ -18,7 +18,7 @@
 在项目根目录下新建文件夹cylsData，并新建两个文件：
 
 ```properties
-# loggerInfo.properties
+cylsInfo.properties
 index=0
 ```
 这个文件用于记录生成的chattingLog的编号。

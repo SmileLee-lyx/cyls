@@ -1,9 +1,12 @@
 package com.github.salomonbrys.kotson
 
-import com.google.gson.*
-import com.google.gson.reflect.*
-import com.google.gson.stream.*
-import java.io.*
+import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.TypeAdapter
+import com.google.gson.reflect.TypeToken
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
+import java.io.Reader
 
 inline fun <reified T : Any> Gson.getAdapter(): TypeAdapter<T> = getAdapter(object : TypeToken<T>() {})
 

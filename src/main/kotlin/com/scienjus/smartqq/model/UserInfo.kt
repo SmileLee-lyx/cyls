@@ -1,6 +1,6 @@
 package com.scienjus.smartqq.model
 
-import com.google.gson.annotations.*
+import com.google.gson.annotations.SerializedName
 
 /**
  * 用户.

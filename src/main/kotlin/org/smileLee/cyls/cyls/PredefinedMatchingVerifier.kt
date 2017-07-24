@@ -1,62 +1,72 @@
 package org.smileLee.cyls.cyls
 
+import org.smileLee.cyls.qqbot.AllRunnerNode
+import org.smileLee.cyls.qqbot.AnyRunnerNode
+import org.smileLee.cyls.qqbot.ContainNode
+import org.smileLee.cyls.qqbot.ContainRegexNode
+import org.smileLee.cyls.qqbot.EqualNode
+import org.smileLee.cyls.qqbot.RegexNode
+import org.smileLee.cyls.qqbot.contain
+import org.smileLee.cyls.qqbot.containRegex
+import org.smileLee.cyls.qqbot.equal
+
 class PredefinedMatchingVerifier private constructor() {
-    class GoodNightVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode(arrayListOf(), runner) {
+    class GoodNightVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode<Cyls>(arrayListOf(), runner) {
         init {
             contain("晚安")
             contain("好梦")
         }
     }
 
-    class GoodMorningVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode(arrayListOf(), runner) {
+    class GoodMorningVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode<Cyls>(arrayListOf(), runner) {
         init {
             contain("早安")
             equal("早")
         }
     }
 
-    class HasOrNotVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode(arrayListOf(), runner) {
+    class HasOrNotVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode<Cyls>(arrayListOf(), runner) {
         init {
             contain("有没有")
             containRegex("有.{0,5}((?<!什)么|吗)")
         }
     }
 
-    class IsOrNotVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode(arrayListOf(), runner) {
+    class IsOrNotVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode<Cyls>(arrayListOf(), runner) {
         init {
             contain("是不是")
             containRegex("是.{0,5}((?<!什)么|吗)")
         }
     }
 
-    class CanOrNotVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode(arrayListOf(), runner) {
+    class CanOrNotVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode<Cyls>(arrayListOf(), runner) {
         init {
             contain("会不会")
             containRegex("会.{0,5}((?<!什)么|吗)")
         }
     }
 
-    class LikeOrNotVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode(arrayListOf(), runner) {
+    class LikeOrNotVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode<Cyls>(arrayListOf(), runner) {
         init {
             contain("喜不喜欢")
             containRegex("喜欢.{0,5}((?<!什)么|吗)")
         }
     }
 
-    class ConfessVerifierNode(runner: (String, Cyls) -> Unit) : ContainNode("表白云裂", runner)
+    class ConfessVerifierNode(runner: (String, Cyls) -> Unit) : ContainNode<Cyls>("表白云裂", runner)
 
-    class ConfessOtherVerifierNode(runner: (String, Cyls) -> Unit) : ContainNode("表白", runner)
+    class ConfessOtherVerifierNode(runner: (String, Cyls) -> Unit) : ContainNode<Cyls>("表白", runner)
 
-    class CheckVerifierNode(runner: (String, Cyls) -> Unit) : AllRunnerNode(arrayListOf(), runner) {
+    class CheckVerifierNode(runner: (String, Cyls) -> Unit) : AllRunnerNode<Cyls>(arrayListOf(), runner) {
         init {
             contain("云裂")
             contain("自检")
         }
     }
 
-    class MentionedVerifierNode(runner: (String, Cyls) -> Unit) : ContainNode("云裂", runner)
+    class MentionedVerifierNode(runner: (String, Cyls) -> Unit) : ContainNode<Cyls>("云裂", runner)
 
-    class NewOperationVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode(arrayListOf(), runner) {
+    class NewOperationVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode<Cyls>(arrayListOf(), runner) {
         init {
             contain("什么操作")
             contain("这种操作")
@@ -65,9 +75,9 @@ class PredefinedMatchingVerifier private constructor() {
     }
 
     class ImproperToContinueVerifierNode(runner: (String, Cyls) -> Unit)
-        : ContainRegexNode("你们?(再?一直再?|再?继续再?)?这样(下去)?是不行的", runner)
+        : ContainRegexNode<Cyls>("你们?(再?一直再?|再?继续再?)?这样(下去)?是不行的", runner)
 
-    class MoPhoenixLiVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode(arrayListOf(), runner) {
+    class MoPhoenixLiVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode<Cyls>(arrayListOf(), runner) {
         init {
             containRegex("原因么?要?(自己)?找一?找")
             contain("什么原因")
@@ -76,7 +86,7 @@ class PredefinedMatchingVerifier private constructor() {
         }
     }
 
-    class MakeBigNewsVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode(arrayListOf(), runner) {
+    class MakeBigNewsVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode<Cyls>(arrayListOf(), runner) {
         init {
             contain("大新闻")
             contain("知识水平")
@@ -95,7 +105,7 @@ class PredefinedMatchingVerifier private constructor() {
         }
     }
 
-    class DeviationInReportVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode(arrayListOf(), runner) {
+    class DeviationInReportVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode<Cyls>(arrayListOf(), runner) {
         init {
             containRegex("高[到了]不知道?(那里去|多少)")
             containRegex("报道上?([江将]来)?(要是)?出了偏差")
@@ -104,12 +114,12 @@ class PredefinedMatchingVerifier private constructor() {
     }
 
     class MaintainLifeVerifierNode(runner: (String, Cyls) -> Unit)
-        : EqualNode("续", runner)
+        : EqualNode<Cyls>("续", runner)
 
     class NotForgetWhenWealthyVerifierNode(runner: (String, Cyls) -> Unit)
-        : RegexNode("苟(\\.|…|。|\\[\"face\",\\d+])*", runner)
+        : RegexNode<Cyls>("苟(\\.|…|。|\\[\"face\",\\d+])*", runner)
 
-    class MohaCompleteWorkVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode(arrayListOf(), runner) {
+    class MohaCompleteWorkVerifierNode(runner: (String, Cyls) -> Unit) : AnyRunnerNode<Cyls>(arrayListOf(), runner) {
         init {
             contain("大新闻")
             contain("知识水平")

@@ -1,16 +1,41 @@
 package com.scienjus.smartqq.client
 
-import com.github.salomonbrys.kotson.*
-import com.google.gson.*
-import com.scienjus.smartqq.*
-import com.scienjus.smartqq.callback.*
-import com.scienjus.smartqq.constant.*
-import com.scienjus.smartqq.frame.*
-import com.scienjus.smartqq.model.*
-import net.dongliu.requests.*
-import net.dongliu.requests.exception.*
-import java.io.*
-import java.net.*
+import com.github.salomonbrys.kotson.castTo
+import com.github.salomonbrys.kotson.fromJson
+import com.github.salomonbrys.kotson.getAsJsonArrayOrNull
+import com.github.salomonbrys.kotson.getObject
+import com.github.salomonbrys.kotson.jsonObjectOf
+import com.github.salomonbrys.kotson.parseAsJsonObject
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import com.scienjus.smartqq.LOGGER
+import com.scienjus.smartqq.callback.MessageCallback
+import com.scienjus.smartqq.constant.ApiURL
+import com.scienjus.smartqq.frame.QRCodeFrame
+import com.scienjus.smartqq.model.Category
+import com.scienjus.smartqq.model.Discuss
+import com.scienjus.smartqq.model.DiscussInfo
+import com.scienjus.smartqq.model.DiscussMessage
+import com.scienjus.smartqq.model.DiscussUser
+import com.scienjus.smartqq.model.Font
+import com.scienjus.smartqq.model.Friend
+import com.scienjus.smartqq.model.FriendStatus
+import com.scienjus.smartqq.model.Group
+import com.scienjus.smartqq.model.GroupInfo
+import com.scienjus.smartqq.model.GroupMessage
+import com.scienjus.smartqq.model.GroupUser
+import com.scienjus.smartqq.model.Message
+import com.scienjus.smartqq.model.Recent
+import com.scienjus.smartqq.model.UserInfo
+import net.dongliu.requests.Client
+import net.dongliu.requests.Response
+import net.dongliu.requests.Session
+import net.dongliu.requests.exception.RequestException
+import java.io.Closeable
+import java.io.File
+import java.io.IOException
+import java.net.SocketTimeoutException
 import java.util.*
 
 /**
@@ -29,7 +54,7 @@ class SmartQQClient @JvmOverloads constructor(
 
     //客户端
     private val client = Client.pooled().maxPerRoute(5).maxTotal(10).build() ?:
-            throw IllegalStateException("获取client失败")
+            throw IllegalStateException("fail to get client")
 
     //会话
     private val session: Session

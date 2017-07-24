@@ -1,9 +1,19 @@
 package com.github.salomonbrys.kotson
 
-import com.google.gson.*
-import com.google.gson.reflect.*
-import com.google.gson.stream.*
-import java.lang.reflect.*
+import com.google.gson.GsonBuilder
+import com.google.gson.InstanceCreator
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonSerializationContext
+import com.google.gson.JsonSerializer
+import com.google.gson.TypeAdapter
+import com.google.gson.reflect.TypeToken
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
+import java.lang.reflect.WildcardType
 
 @Suppress("PROTECTED_CALL_FROM_PUBLIC_INLINE")
 inline fun <reified T : Any> gsonTypeToken(): Type = object : TypeToken<T>() {}.type

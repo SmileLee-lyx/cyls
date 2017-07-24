@@ -1,7 +1,13 @@
 package com.github.salomonbrys.kotson
 
-import com.google.gson.*
-import java.math.*
+import com.google.gson.Gson
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonNull
+import com.google.gson.JsonObject
+import com.google.gson.JsonSerializationContext
+import java.math.BigDecimal
+import java.math.BigInteger
 import java.util.*
 
 private fun <T : Any> JsonElement?._nullOr(getNotNull: JsonElement.() -> T): T?

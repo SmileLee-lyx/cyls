@@ -1,6 +1,6 @@
-package org.smileLee.cyls.cyls
+package org.smileLee.cyls.qqbot
 
-import org.smileLee.cyls.util.*
+import org.smileLee.cyls.util.Util
 
 abstract class ReplyInfo(private val replies: Array<Array<String>>) {
     fun replyTo(replier: Replier) = Util.itemByChance(*replies).forEach {

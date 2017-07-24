@@ -1,7 +1,9 @@
 package com.scienjus.smartqq.model
 
-import com.github.salomonbrys.kotson.*
-import com.google.gson.*
+import com.github.salomonbrys.kotson.getObject
+import com.github.salomonbrys.kotson.string
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 
 /**
  * 群消息.

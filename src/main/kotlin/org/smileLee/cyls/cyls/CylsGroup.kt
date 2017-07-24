@@ -1,14 +1,113 @@
 package org.smileLee.cyls.cyls
 
-import com.alibaba.fastjson.annotation.*
-import com.scienjus.smartqq.model.*
-import org.ansj.splitWord.analysis.*
-import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.*
-import org.smileLee.cyls.cyls.PredefinedReplyInfo.*
-import org.smileLee.cyls.util.*
-import org.smileLee.smilescript.expression.controlExpression.*
-import org.smileLee.smilescript.stack.*
-import java.lang.Thread.*
+import com.alibaba.fastjson.annotation.JSONType
+import com.scienjus.smartqq.model.Group
+import com.scienjus.smartqq.model.GroupInfo
+import com.scienjus.smartqq.model.GroupUser
+import org.ansj.splitWord.analysis.ToAnalysis
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.CanOrNotVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.CheckVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.ConfessOtherVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.ConfessVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.DeviationInReportVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.GoodMorningVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.GoodNightVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.HasOrNotVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.ImproperToContinueVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.IsOrNotVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.LikeOrNotVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.MaintainLifeVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.MakeBigNewsVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.MentionedVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.MoPhoenixLiVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.MohaCompleteWorkVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.NewOperationVerifierNode
+import org.smileLee.cyls.cyls.PredefinedMatchingVerifier.NotForgetWhenWealthyVerifierNode
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.AdminHelpSudo
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.AuthorityRequired
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.BallDice
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.CalculationResult
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.CanOrNot
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.CancelMohaNonMohaGroupUser
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.CancelRepeatGroup
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.CancelRepeatGroupUser
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.CancelRepeatNonRepeatedGroup
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.CancelRepeatNonRepeatedGroupUser
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.Check
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.ChooseMohaMode
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.ChooseMohaTarget
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.ChooseQueryRange
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.ChooseRepeatMode
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.ChooseRepeatTarget
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.CityNameAndDateRequired
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.CityNameRequired
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.CoinDice
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.Confess
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.ConfessOther
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.CubeDice
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.DeviationInReport
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.DotDice
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.GoodMorning
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.GoodNight
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.GroupAdminAuthorized
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.GroupAdminUnauthorized
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.GroupMemberIgnored
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.GroupMemberRecognized
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.GroupMemberUnauthorized
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.GroupOwnerUnauthorized
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.GroupPaused
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.GroupPausedAgain
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.GroupResumed
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.GroupResumedAgain
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.GroupUserUidRequired
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.HasOrNot
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.HelpHint
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.HelpUtil
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.ImproperToContinue
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.IrregularDice
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.IsOrNot
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.LikeOrNot
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.Load
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.MakeBigNews
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.MemberHelpSudo
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.MemberNotFound
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.Mentioned
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.MoPhoenixLi
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.MohaCompleteWork
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.MohaGroupUser
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.MohaGroupUserAgain
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.NegativeDice
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.NewOperation
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.NotForgetWhenWealthy
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.OwnerHelpSudo
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.QueryResult
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.QueryStart
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.Quit
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.RegularDice
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.RepeatGroup
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.RepeatGroupUser
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.RepeatWord
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.Save
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.SetRepeatGroupFrequency
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.SetRepeatGroupUserFrequency
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.SoonerOrLater
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.SudoHint
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.TestAdmin
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.TestMember
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.TestOwner
+import org.smileLee.cyls.cyls.PredefinedReplyInfo.UtilHint
+import org.smileLee.cyls.qqbot.MatchingVerifier
+import org.smileLee.cyls.qqbot.QQBotGroup
+import org.smileLee.cyls.qqbot.TreeNode
+import org.smileLee.cyls.qqbot.childNode
+import org.smileLee.cyls.qqbot.createTree
+import org.smileLee.cyls.qqbot.createVerifier
+import org.smileLee.cyls.qqbot.special
+import org.smileLee.cyls.util.InitNonNullMap
+import org.smileLee.cyls.util.Util
+import org.smileLee.smilescript.expression.controlExpression.Block
+import org.smileLee.smilescript.stack.Stack
+import java.lang.Thread.sleep
 
 @JSONType(ignores = arrayOf(
         "hot",
@@ -23,16 +122,16 @@ import java.lang.Thread.*
         "stack"
 ))
 class CylsGroup(
-        var name: String = "",
+        override var name: String = "",
         var isPaused: Boolean = false,
         var isRepeated: Boolean = false,
         var repeatFrequency: Double = 0.0,
-        var status: ChattingStatus = ChattingStatus.COMMON,
-        var group: Group? = null,
-        var groupInfo: GroupInfo? = null
-) {
+        override var status: ChattingStatus = ChattingStatus.COMMON,
+        override var group: Group? = null,
+        override var groupInfo: GroupInfo? = null
+) : QQBotGroup<Cyls>() {
     private var _groupUsersFromId: HashMap<Long, GroupUser> = HashMap()
-    val groupUsersFromId = InitNonNullMap(_groupUsersFromId) { key ->
+    override val groupUsersFromId = InitNonNullMap(_groupUsersFromId) { key ->
         groupInfo?.users?.forEach {
             if (it.userId == key) {
                 _groupUsersFromId.put(key, it)
@@ -59,17 +158,12 @@ class CylsGroup(
         Thread(Runnable { sleep(5 * 60 * 1000); --_greetingCount }).start()
     }
 
-    fun set(group: Group) {
-        name = group.name ?: ""
-        this.group = group
-    }
-
     private val stack = Stack()
     fun calculate(s: String) = Block.parse(s).invoke(stack)
 
     companion object {
         val MAX_MESSAGE_COUNT = 50
-        val commonCommand = createTree {
+        val commonCommand = createTree<Cyls> {
             childNode("sudo", { _, cyls ->
                 SudoHint().replyTo(cyls.currentGroupReplier)
             }) {
@@ -558,7 +652,7 @@ class CylsGroup(
                 }
             }
         }
-        val commonVerifier = createVerifier {
+        val commonVerifier = createVerifier<Cyls> {
             +GoodNightVerifierNode { _, cyls ->
                 val hasGreeted = cyls.currentGroup.hasGreeted
                 cyls.currentGroup.addGreeting()
@@ -615,7 +709,7 @@ class CylsGroup(
                     mohaExpertVerifier.findAndRun(str, cyls)
             }
         }
-        private val commonMohaVerifier = createVerifier {
+        private val commonMohaVerifier = createVerifier<Cyls> {
             +MakeBigNewsVerifierNode { _, cyls ->
                 MakeBigNews().replyTo(cyls.currentGroupReplier)
             }
@@ -629,7 +723,7 @@ class CylsGroup(
                 NotForgetWhenWealthy().replyTo(cyls.currentGroupReplier)
             }
         }
-        private val mohaExpertVerifier = createVerifier {
+        private val mohaExpertVerifier = createVerifier<Cyls> {
             +MohaCompleteWorkVerifierNode { _, cyls ->
                 MohaCompleteWork().replyTo(cyls.currentGroupReplier)
             }
@@ -640,9 +734,12 @@ class CylsGroup(
     }
 
     enum class ChattingStatus(
-            val commandTree: TreeNode,
-            val replyVerifier: MatchingVerifier
-    ) {
+            private val _commandTree: TreeNode<Cyls>,
+            private val _replyVerifier: MatchingVerifier<Cyls>
+    ) : QQBotChattingStatus<Cyls> {
         COMMON(commonCommand, commonVerifier);
+
+        override val commandTree get() = _commandTree
+        override val replyVerifier get() = _replyVerifier
     }
 }

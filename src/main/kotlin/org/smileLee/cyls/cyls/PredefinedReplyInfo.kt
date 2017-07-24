@@ -1,6 +1,9 @@
 package org.smileLee.cyls.cyls
 
-import org.smileLee.smilescript.value.*
+import org.smileLee.cyls.qqbot.QQBot
+import org.smileLee.cyls.qqbot.ReplyInfo
+import org.smileLee.cyls.qqbot.arrayOf
+import org.smileLee.smilescript.value.Value
 
 class PredefinedReplyInfo private constructor() {
     class SudoHint : ReplyInfo(arrayOf {
@@ -22,49 +25,49 @@ class PredefinedReplyInfo private constructor() {
     })
 
     class GroupMemberIgnored(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "$nick 已被屏蔽，然而这么做是不是不太好…… |•ω•`)"
         )
     })
 
     class GroupMemberRecognized(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "$nick 已被解除屏蔽|•ω•`)"
         )
     })
 
     class GroupMemberAuthorized(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "$nick 已被设置为管理员啦 |•ω•`)"
         )
     })
 
     class GroupAdminAuthorized(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "$nick 已经是管理员了， 再设置一次有什么好处么…… |•ω•`)"
         )
     })
 
     class GroupMemberUnauthorized(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "$nick 并不是管理员啊，主人你是怎么想到这么做的啊…… |•ω•`)"
         )
     })
 
     class GroupAdminUnauthorized(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "$nick 已被取消管理员身份……不过，真的要这样么 |•ω•`)"
         )
     })
 
     class GroupOwnerUnauthorized(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "$nick 是云裂的主人哦，不能被取消管理员身份…… |•ω•`)"
         )
@@ -123,28 +126,28 @@ class PredefinedReplyInfo private constructor() {
     })
 
     class RepeatGroupUser(group: CylsGroup, userId: Long, frequency: Double) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "${nick}的发言将被以${frequency}的概率重复，然而这真是无聊 |•ω•`)"
         )
     })
 
     class SetRepeatGroupUserFrequency(group: CylsGroup, userId: Long, frequency: Double) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "重复${nick}的发言的概率被设置为$frequency |•ω•`)"
         )
     })
 
     class CancelRepeatGroupUser(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "已取消重复${nick}的发言 |•ω•`)"
         )
     })
 
     class CancelRepeatNonRepeatedGroupUser(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "本来就没有在重复${nick}的发言啊 |•ω•`)"
         )
@@ -159,28 +162,28 @@ class PredefinedReplyInfo private constructor() {
     })
 
     class MohaGroupUser(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "${nick}已被设置为moha专家，真是搞个大新闻 |•ω•`)"
         )
     })
 
     class MohaGroupUserAgain(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "${nick}本来就是moha专家啊 |•ω•`)"
         )
     })
 
     class CancelMohaGroupUser(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "${nick}已被取消moha专家，一定是知识水平不够 |•ω•`)"
         )
     })
 
     class CancelMohaNonMohaGroupUser(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf(
                 "${nick}本来就不是moha专家啊，为什么要搞大新闻 |•ω•`)"
         )
@@ -386,7 +389,7 @@ class PredefinedReplyInfo private constructor() {
 
     class GoodNight : ReplyInfo {
         constructor(group: CylsGroup, userId: Long) : super(arrayOf {
-            val nick = Cyls.getGroupUserNick(group, userId)
+            val nick = QQBot.getGroupUserNick(group, userId)
             +arrayOf("晚安|•ω•`)")
             +arrayOf("好梦|•ω•`)")
             +arrayOf("$nick ，好梦|•ω•`)")
@@ -400,7 +403,7 @@ class PredefinedReplyInfo private constructor() {
 
     class GoodMorning : ReplyInfo {
         constructor(group: CylsGroup, userId: Long) : super(arrayOf {
-            val nick = Cyls.getGroupUserNick(group, userId)
+            val nick = QQBot.getGroupUserNick(group, userId)
             +arrayOf("早|•ω•`)")
             +arrayOf("早安|•ω•`)")
             +arrayOf("$nick ，早啊|•ω•`)")
@@ -453,7 +456,7 @@ class PredefinedReplyInfo private constructor() {
     })
 
     class Confess(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf("不要整天搞个大新闻 |•ω•`)")
         +arrayOf("表白$nick |•ω•`)")
         +arrayOf("接受表白 |•ω•`)")
@@ -463,7 +466,7 @@ class PredefinedReplyInfo private constructor() {
     })
 
     class ConfessOther(group: CylsGroup, userId: Long) : ReplyInfo(arrayOf {
-        val nick = Cyls.getGroupUserNick(group, userId)
+        val nick = QQBot.getGroupUserNick(group, userId)
         +arrayOf("$nick 你这么喜欢表白么 |•ω•`)")
         +arrayOf("表白+1 |•ω•`)")
         +arrayOf("围观dalao表白 |•ω•`)")

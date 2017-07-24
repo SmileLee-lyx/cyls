@@ -1,7 +1,11 @@
 package com.github.salomonbrys.kotson
 
-import com.google.gson.*
-import com.google.gson.stream.*
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonNull
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import com.google.gson.stream.JsonWriter
 
 fun Number.toJson(): JsonPrimitive = JsonPrimitive(this)
 
