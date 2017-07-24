@@ -23,12 +23,10 @@ interface PathNode : VerifyNode {
 
 interface RunnerNode : VerifyNode {
     val runner: (String, Cyls) -> Unit
-    override fun verifyAndRun(string: String, cyls: Cyls): Boolean {
-        return if (matches(string, cyls)) {
-            runner(string, cyls)
-            true
-        } else false
-    }
+    override fun verifyAndRun(string: String, cyls: Cyls) = if (matches(string, cyls)) {
+        runner(string, cyls)
+        true
+    } else false
 }
 
 open class AnyRunnerNode(

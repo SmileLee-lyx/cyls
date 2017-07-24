@@ -36,13 +36,9 @@ class TreeNode {
         this.runner = { str, cyls -> runner.run(str, cyls) }
     }
 
-    fun findPath(path: List<String>, index: Int = 0): TreeNode {
-        return if (index == path.size) this
-        else children[path[index]]?.findPath(path, index + 1) ?: throw PathException()
-    }
+    fun findPath(path: List<String>, index: Int = 0): TreeNode = if (index == path.size) this
+    else children[path[index]]?.findPath(path, index + 1) ?: throw PathException()
 
-    fun run(message: String, cyls: Cyls) {
-        runner(message, cyls)
-    }
+    fun run(message: String, cyls: Cyls) = runner(message, cyls)
 }
 

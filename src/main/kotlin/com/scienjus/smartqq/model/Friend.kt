@@ -9,18 +9,10 @@ package com.scienjus.smartqq.model
  * *
  * @date 2015/12/18.
  */
-class Friend {
-
-    var userId = 0L
-
-    var markname: String? = null
-
-    var nickname = ""
-
-    var isVip = false
-
-    var vipLevel = 0
-
-    override fun toString() =
-            "Friend{userId=$userId, markname='$markname', nickname='$nickname', vip=$isVip, vipLevel=$vipLevel}"
-}
+data class Friend(
+        var userId: Long = 0L,
+        var markname: String? = null,
+        var nickname: String? = "",
+        var isVip: Boolean = false,
+        var vipLevel: Int = 0
+)

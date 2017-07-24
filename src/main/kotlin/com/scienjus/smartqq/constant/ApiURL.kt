@@ -8,7 +8,6 @@ package com.scienjus.smartqq.constant
  * @date 2015/12/19
  */
 class ApiURL(val url: String, val referer: String?) {
-
     fun buildUrl(vararg params: Any): String {
         var i = 1
         var url = this.url

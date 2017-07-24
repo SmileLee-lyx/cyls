@@ -23,22 +23,6 @@ class Cyls(loggerInfoName: String) {
         dos.close()
     }
 
-    private val MAX_RETRY = 3
-    inline private fun <T> retry(action: () -> T): T {
-        for (retry in 0..MAX_RETRY) {
-            try {
-                return action()
-            } catch (e: Exception) {
-                if (retry != MAX_RETRY) {
-                    println("[${Util.timeName}] 第${retry + 1}次尝试失败。正在重试...")
-                }
-            }
-        }
-        println("[${Util.timeName}] 重试次数达到最大限制，程序无法继续进行。")
-        System.exit(1)
-        throw Error("Unreachable code")
-    }
-
     private var working = true
 
     var data = Data()
@@ -47,10 +31,13 @@ class Cyls(loggerInfoName: String) {
     var currentFriendMessage: Message = Message()
     val currentGroupId get() = currentGroupMessage.groupId
     val currentGroupUserId get() = currentGroupMessage.userId
-    val currentFriendId get() = currentFriendMessage.userId
-    val currentGroup get() = data._cylsGroupFromId[currentGroupMessage.groupId]!!
-    val currentGroupUser get() = data._cylsFriendFromId[currentGroupMessage.userId]!!
-    val currentFriend get() = data._cylsFriendFromId[currentFriendMessage.userId]!!
+    val currentFriendId get() = currentFriendMessage.userId ?: 0
+    val currentGroup get() = data._cylsGroupFromId[currentGroupMessage.groupId] ?:
+            throw IllegalStateException("group not exist")
+    val currentGroupUser get() = data._cylsFriendFromId[currentGroupMessage.userId] ?:
+            throw IllegalStateException("group user not exist")
+    val currentFriend get() = data._cylsFriendFromId[currentFriendMessage.userId] ?:
+            throw IllegalStateException("friend not exist")
 
     /**
      * SmartQQ客户端
@@ -60,12 +47,13 @@ class Cyls(loggerInfoName: String) {
         override fun onMessage(message: Message) {
             if (working) {
                 try {
-                    log("[${Util.timeName}] [私聊] ${getFriendNick(message.userId)}：${message.content}")
+                    log("[${Util.timeName}] [私聊] ${getFriendNick(message.userId ?: 0)}：${message.content}")
                     currentFriendMessage = message
                     currentGroup
                     currentFriend
-                    if (message.content.startsWith("cyls.")) try {
-                        val order = Util.readOrder(message.content.substring(5))
+                    val content = message.content ?: ""
+                    if (content.startsWith("cyls.")) try {
+                        val order = Util.readOrder(content.substring(5))
                         currentFriend.status.commandTree.findPath(order.path).run(order.message, this@Cyls)
                     } catch (e: PathException) {
                         currentFriendReplier.reply("请确保输入了正确的指令哦|•ω•`)")
@@ -73,10 +61,10 @@ class Cyls(loggerInfoName: String) {
                         if (!currentGroupUser.isIgnored) {
                             if (currentGroupUser.isRepeated) {
                                 Util.runByChance(currentGroupUser.repeatFrequency) {
-                                    currentFriendReplier.reply(message.content)
+                                    currentFriendReplier.reply(content)
                                 }
                             } else {
-                                currentFriend.status.replyVerifier.findAndRun(message.content, this@Cyls)
+                                currentFriend.status.replyVerifier.findAndRun(content, this@Cyls)
                             }
                         }
                     }
@@ -93,8 +81,9 @@ class Cyls(loggerInfoName: String) {
                     currentGroupMessage = message
                     currentGroup
                     currentGroupUser
-                    if (message.content.startsWith("cyls.")) try {
-                        val order = Util.readOrder(message.content.substring(5))
+                    val content = message.content ?: ""
+                    if (content.startsWith("cyls.")) try {
+                        val order = Util.readOrder(content.substring(5))
                         currentGroup.status.commandTree.findPath(order.path).run(order.message, this@Cyls)
                     } catch (e: PathException) {
                         currentGroupReplier.reply("请确保输入了正确的指令哦|•ω•`)")
@@ -104,13 +93,13 @@ class Cyls(loggerInfoName: String) {
                             currentGroup.addMessage()
                             when {
                                 currentGroupUser.isRepeated -> Util.runByChance(currentGroupUser.repeatFrequency) {
-                                    currentGroupReplier.reply(message.content)
+                                    currentGroupReplier.reply(content)
                                 }
                                 currentGroup.isRepeated     -> Util.runByChance(currentGroup.repeatFrequency) {
-                                    currentGroupReplier.reply(message.content)
+                                    currentGroupReplier.reply(content)
                                 }
                                 else                        -> currentGroup.status.replyVerifier
-                                        .findAndRun(message.content, this@Cyls)
+                                        .findAndRun(content, this@Cyls)
                             }
                         }
                     }
@@ -131,7 +120,7 @@ class Cyls(loggerInfoName: String) {
     fun load() {
         val json = savedFile.readText()
         data = JSON.parseObject(json, Data::class.java)
-        working = false   //映射建立完毕前暂停接收消息以避免NullPointerException
+        working = false   //映射建立完毕前暂停接收消息以避免NPE
         println()
         println("[${Util.timeName}] 开始建立索引，暂停接收消息")
         println("[${Util.timeName}] 尝试建立好友列表索引...")
@@ -145,14 +134,7 @@ class Cyls(loggerInfoName: String) {
         }
         println("[${Util.timeName}] 建立好友列表索引成功。")
         println("[${Util.timeName}] 尝试建立群列表索引...")
-        val groupList = retry { client.groupList }
-        retry {
-            groupList.forEach { group ->
-                data.cylsGroupList.filter { cylsGroup -> cylsGroup.name == group.name }
-                        .forEach { cylsGroup -> cylsGroup.set(group) }
-                data.cylsGroupFromId[group.groupId].set(group)
-            }
-        }
+        initGroup(client, data.cylsGroupList, data.cylsGroupFromId)
         println("[${Util.timeName}] 建立群列表索引成功。")
         data.cylsFriendList.filter { it.markName == "smileLee" }
                 .forEach { it.adminLevel = CylsFriend.AdminLevel.OWNER }
@@ -326,10 +308,41 @@ class Cyls(loggerInfoName: String) {
     }
 
     companion object {
+        private val MAX_RETRY = 3
+        inline private fun <T> retry(action: () -> T): T {
+            for (retry in 0..MAX_RETRY) {
+                try {
+                    return action()
+                } catch (e: Exception) {
+                    if (retry != MAX_RETRY) {
+                        println("[${Util.timeName}] 第${retry + 1}次尝试失败。正在重试...")
+                    }
+                }
+            }
+            println("[${Util.timeName}] 重试次数达到最大限制，程序无法继续进行。")
+            System.exit(1)
+            throw Error("Unreachable code")
+        }
+
         fun getFriendNick(friend: CylsFriend): String = friend.markName
         fun getGroupUserNick(group: CylsGroup, userId: Long): String {
             val user = group.groupUsersFromId[userId]
-            return user.card ?: user.nick
+            return user.card ?: user.nick ?: ""
+        }
+
+        fun initGroup(
+                client: SmartQQClient,
+                cylsGroupList: ArrayList<CylsGroup>,
+                cylsGroupFromId: InitNonNullMap<Long, CylsGroup>
+        ) {
+            val groupList = retry { client.groupList }
+            retry {
+                groupList.forEach { group ->
+                    cylsGroupList.filter { cylsGroup -> cylsGroup.name == group.name }
+                            .forEach { cylsGroup -> cylsGroup.set(group) }
+                    cylsGroupFromId[group.groupId].set(group)
+                }
+            }
         }
     }
 }

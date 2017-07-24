@@ -27,16 +27,16 @@ class CylsGroup(
         var isPaused: Boolean = false,
         var isRepeated: Boolean = false,
         var repeatFrequency: Double = 0.0,
-        var status: ChattingStatus = ChattingStatus.COMMON
+        var status: ChattingStatus = ChattingStatus.COMMON,
+        var group: Group? = null,
+        var groupInfo: GroupInfo? = null
 ) {
-    var group: Group? = null
-    var groupInfo: GroupInfo? = null
     private var _groupUsersFromId: HashMap<Long, GroupUser> = HashMap()
-    val groupUsersFromId = InitSafeMap(_groupUsersFromId) { key ->
+    val groupUsersFromId = InitNonNullMap(_groupUsersFromId) { key ->
         groupInfo?.users?.forEach {
             if (it.userId == key) {
                 _groupUsersFromId.put(key, it)
-                return@InitSafeMap it
+                return@InitNonNullMap it
             }
         }
         null!!
@@ -60,7 +60,7 @@ class CylsGroup(
     }
 
     fun set(group: Group) {
-        name = group.name
+        name = group.name ?: ""
         this.group = group
     }
 
@@ -416,9 +416,11 @@ class CylsGroup(
                 }) {
                     childNode("groupuser", { str, cyls ->
                         QueryStart().replyTo(cyls.currentGroupReplier)
-                        val groupUsers = cyls.getGroupInfoFromID(cyls.currentGroupId).users
-                        groupUsers.forEach { user ->
-                            val userName = cyls.getGroupUserNick(cyls.currentGroupId, user.userId)
+                        val groupId = cyls.currentGroupId
+                        val groupInfoFromID = cyls.getGroupInfoFromID(groupId)
+                        val groupUsers = groupInfoFromID.users
+                        groupUsers?.forEach { user ->
+                            val userName = cyls.getGroupUserNick(groupId, user.userId)
                             if (userName.contains(str)) {
                                 QueryResult(user.userId, userName)
                                         .replyTo(cyls.currentGroupReplier)
@@ -430,7 +432,7 @@ class CylsGroup(
                         QueryStart().replyTo(cyls.currentGroupReplier)
                         cyls.data.cylsFriendList.forEach { friend ->
                             val friendInfo = friend.friend
-                            if (friendInfo != null && friendInfo.nickname.contains(str)) {
+                            if (friendInfo != null && friendInfo.nickname?.contains(str) == true) {
                                 QueryResult(friendInfo.userId, friend.markName)
                                         .replyTo(cyls.currentGroupReplier)
                             }
@@ -440,7 +442,7 @@ class CylsGroup(
                         QueryStart().replyTo(cyls.currentGroupReplier)
                         cyls.data.cylsGroupList.forEach { group ->
                             val groupInfo = group.group
-                            if (groupInfo != null && groupInfo.name.contains(str)) {
+                            if (groupInfo != null && groupInfo.name?.contains(str) == true) {
                                 QueryResult(groupInfo.groupId, group.name)
                                         .replyTo(cyls.currentGroupReplier)
                             }

@@ -1,6 +1,6 @@
 package org.smileLee.cyls.util
 
-class InitSafeMap<K, V>(private val m: HashMap<K, V>, private val init: (K) -> V) : SafeMap<K, V> {
+class InitNonNullMap<K, V>(private val m: HashMap<K, V>, private val init: (K) -> V) : NonNullMap<K, V> {
     override fun get(key: K): V = m[key] ?: let {
         val value = init(key)
         m.put(key, value)

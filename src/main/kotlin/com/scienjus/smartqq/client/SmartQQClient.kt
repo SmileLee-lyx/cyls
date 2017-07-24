@@ -1,13 +1,14 @@
 package com.scienjus.smartqq.client
 
-import com.alibaba.fastjson.*
+import com.github.salomonbrys.kotson.*
+import com.google.gson.*
+import com.scienjus.smartqq.*
 import com.scienjus.smartqq.callback.*
 import com.scienjus.smartqq.constant.*
 import com.scienjus.smartqq.frame.*
 import com.scienjus.smartqq.model.*
 import net.dongliu.requests.*
 import net.dongliu.requests.exception.*
-import org.slf4j.*
 import java.io.*
 import java.net.*
 import java.util.*
@@ -27,7 +28,8 @@ class SmartQQClient @JvmOverloads constructor(
 ) : Closeable {
 
     //客户端
-    private val client = Client.pooled().maxPerRoute(5).maxTotal(10).build()!!
+    private val client = Client.pooled().maxPerRoute(5).maxTotal(10).build() ?:
+            throw IllegalStateException("获取client失败")
 
     //会话
     private val session: Session
@@ -61,7 +63,7 @@ class SmartQQClient @JvmOverloads constructor(
         getVfwebqq()
         getUinAndPsessionid()
         friendStatus //修复Api返回码[103]的问题
-        LOGGER.info(accountInfo.nick!! + "，欢迎！") //登录成功欢迎语
+        LOGGER.info("${accountInfo.nick}，欢迎！") //登录成功欢迎语
     }
 
     private val runner = Runnable {
@@ -91,7 +93,8 @@ class SmartQQClient @JvmOverloads constructor(
     //登录流程1：获取二维码
     //登录流程2：验证二维码扫描
     private fun getAndVerifyQRCode(qrCodeFile: File): String {
-        getAndVerify@ while (true) {
+        //阻塞直到确认二维码认证成功
+        while (true) {
             LOGGER.debug("开始获取二维码")
 
             //本地存储二维码图片
@@ -105,10 +108,10 @@ class SmartQQClient @JvmOverloads constructor(
             val getQRCodeResponse = session.get(ApiURL.GET_QR_CODE.url)
                     .addHeader("User-Agent", ApiURL.USER_AGENT)
                     .file(filePath)
-            for (cookie in getQRCodeResponse.cookies) {
+            getQRCodeResponse.cookies.forEach { cookie ->
                 if (cookie.name == "qrsig") {
                     qrsig = cookie.value
-                    break
+                    return@forEach
                 }
             }
             LOGGER.info("二维码已保存在 $filePath 文件中，请打开手机QQ并扫描二维码")
@@ -116,13 +119,12 @@ class SmartQQClient @JvmOverloads constructor(
 
             LOGGER.debug("等待扫描二维码")
 
-            //阻塞直到确认二维码认证成功
-            verify@ while (true) {
+            while (true) {
                 sleep(1)
                 val verifyQRCodeResponse = get(ApiURL.VERIFY_QR_CODE, hash33(qrsig))
                 val result = verifyQRCodeResponse.body
                 if (result.contains("成功")) {
-                    for (content in result.split("','".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()) {
+                    result.split("','".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray().forEach { content ->
                         if (content.startsWith("http")) {
                             LOGGER.info("正在登录，请稍后")
                             qrframe.dispose() //认证成功后释放窗体资源
@@ -132,7 +134,7 @@ class SmartQQClient @JvmOverloads constructor(
                 } else if (result.contains("已失效")) {
                     LOGGER.info("二维码已失效，尝试重新获取二维码")
                     qrframe.waitForQRCode() //等待新的二维码
-                    continue@getAndVerify
+                    break
                 }
             }
         }
@@ -151,23 +153,27 @@ class SmartQQClient @JvmOverloads constructor(
         LOGGER.debug("开始获取vfwebqq")
 
         val response = get(ApiURL.GET_VFWEBQQ, ptwebqq)
-        this.vfwebqq = getJsonObjectResult(response).getString("vfwebqq")
+        this.vfwebqq = getJsonObjectResult(response)?.getAsJsonPrimitive("vfwebqq")?.asString
+                ?: throw IllegalStateException("fail to get vfwebqq")
     }
 
     //登录流程5：获取uin和psessionid
     private fun getUinAndPsessionid() {
         LOGGER.debug("开始获取uin和psessionid")
 
-        val r = JSONObject()
-        r.put("ptwebqq", ptwebqq)
-        r.put("clientid", Client_ID)
-        r.put("psessionid", "")
-        r.put("status", "online")
+        val r = jsonObjectOf(
+                "ptwebqq" to ptwebqq,
+                "clientid" to Client_ID,
+                "psessionid" to "",
+                "status" to "online"
+        )
 
         val response = post(ApiURL.GET_UIN_AND_PSESSIONID, r)
         val result = getJsonObjectResult(response)
-        this.psessionid = result.getString("psessionid")
-        this.uin = result.getLongValue("uin")
+        this.psessionid = result?.getAsJsonPrimitive("psessionid")?.asString ?:
+                throw IllegalStateException("fail to get psessionid")
+        this.uin = result.getAsJsonPrimitive("uin")?.asLong ?:
+                throw IllegalStateException("fail to get uin")
     }
 
     /**
@@ -179,13 +185,15 @@ class SmartQQClient @JvmOverloads constructor(
         get() {
             LOGGER.debug("开始获取群列表")
 
-            val r = JSONObject()
-            r.put("vfwebqq", vfwebqq)
-            r.put("hash", hash())
+            val r = jsonObjectOf(
+                    "vfwebqq" to vfwebqq,
+                    "hash" to hash()
+            )
 
             val response = post(ApiURL.GET_GROUP_LIST, r)
             val result = getJsonObjectResult(response)
-            return JSON.parseArray(result.getJSONArray("gnamelist").toJSONString(), Group::class.java)
+            return Gson().fromJson(result?.getAsJsonArrayOrNull("gnamelist") ?:
+                    throw IllegalStateException("fail to get group list"))
         }
 
     /**
@@ -196,25 +204,25 @@ class SmartQQClient @JvmOverloads constructor(
     private fun pollMessage(callback: MessageCallback) {
         LOGGER.debug("开始接收消息")
 
-        val r = JSONObject()
-        r.put("ptwebqq", ptwebqq)
-        r.put("clientid", Client_ID)
-        r.put("psessionid", psessionid)
-        r.put("key", "")
+        val r = jsonObjectOf(
+                "ptwebqq" to ptwebqq,
+                "clientid" to Client_ID,
+                "psessionid" to psessionid,
+                "key" to ""
+        )
 
         val response = post(ApiURL.POLL_MESSAGE, r)
-        val array = getJsonArrayResult(response)
-        var i = 0
-        if (array != null) while (i < array.size) {
-            val message = array.getJSONObject(i)
-            val type = message.getString("poll_type")
-            when (type) {
-                "message"       -> callback.onMessage(Message(message.getJSONObject("value")))
-                "group_message" -> callback.onGroupMessage(GroupMessage(message.getJSONObject("value")))
-                "discu_message" -> callback.onDiscussMessage(DiscussMessage(message.getJSONObject("value")))
-            }
-            i++
-        }
+        getJsonArrayResult(response)
+                ?.forEach {
+                    it as JsonObject
+
+                    val type = it["poll_type"].asString
+                    when (type) {
+                        "message"       -> callback.onMessage(Message(it.getAsJsonObject("value")))
+                        "group_message" -> callback.onGroupMessage(GroupMessage(it.getAsJsonObject("value")))
+                        "discu_message" -> callback.onDiscussMessage(DiscussMessage(it.getAsJsonObject("value")))
+                    }
+                }
     }
 
     /**
@@ -227,13 +235,16 @@ class SmartQQClient @JvmOverloads constructor(
     fun sendMessageToGroup(groupId: Long, msg: String) {
         LOGGER.debug("开始发送群消息")
 
-        val r = JSONObject()
-        r.put("group_uin", groupId)
-        r.put("content", JSON.toJSONString(Arrays.asList(msg, Arrays.asList("font", Font.DEFAULT_FONT))))  //注意这里虽然格式是Json，但是实际是String
-        r.put("face", 573)
-        r.put("clientid", Client_ID)
-        r.put("msg_id", MESSAGE_ID++)
-        r.put("psessionid", psessionid)
+        //注意这里虽然格式是Json，但是实际是String
+        val content = Gson().toJson(arrayListOf(msg, arrayListOf("font", Font.DEFAULT_FONT)))
+        val r = jsonObjectOf(
+                "group_uin" to groupId,
+                "content" to content,
+                "face" to 573,
+                "clientid" to Client_ID,
+                "msg_id" to MESSAGE_ID++,
+                "psessionid" to psessionid
+        )
 
         val response = postWithRetry(ApiURL.SEND_MESSAGE_TO_GROUP, r)
         checkSendMsgResult(response)
@@ -249,13 +260,16 @@ class SmartQQClient @JvmOverloads constructor(
     fun sendMessageToDiscuss(discussId: Long, msg: String) {
         LOGGER.debug("开始发送讨论组消息")
 
-        val r = JSONObject()
-        r.put("did", discussId)
-        r.put("content", JSON.toJSONString(Arrays.asList(msg, Arrays.asList("font", Font.DEFAULT_FONT))))  //注意这里虽然格式是Json，但是实际是String
-        r.put("face", 573)
-        r.put("clientid", Client_ID)
-        r.put("msg_id", MESSAGE_ID++)
-        r.put("psessionid", psessionid)
+        //注意这里虽然格式是Json，但是实际是String
+        val content = Gson().toJson(arrayListOf(msg, arrayListOf("font", Font.DEFAULT_FONT)))
+        val r = jsonObjectOf(
+                "did" to discussId,
+                "content" to content,
+                "face" to 573,
+                "clientid" to Client_ID,
+                "msg_id" to MESSAGE_ID++,
+                "psessionid" to psessionid
+        )
 
         val response = postWithRetry(ApiURL.SEND_MESSAGE_TO_DISCUSS, r)
         checkSendMsgResult(response)
@@ -271,13 +285,16 @@ class SmartQQClient @JvmOverloads constructor(
     fun sendMessageToFriend(friendId: Long, msg: String) {
         LOGGER.debug("开始发送消息")
 
-        val r = JSONObject()
-        r.put("to", friendId)
-        r.put("content", JSON.toJSONString(Arrays.asList(msg, Arrays.asList("font", Font.DEFAULT_FONT))))  //注意这里虽然格式是Json，但是实际是String
-        r.put("face", 573)
-        r.put("clientid", Client_ID)
-        r.put("msg_id", MESSAGE_ID++)
-        r.put("psessionid", psessionid)
+        //注意这里虽然格式是Json，但是实际是String
+        val content = Gson().toJson(arrayListOf(msg, arrayListOf("font", Font.DEFAULT_FONT)))
+        val r = jsonObjectOf(
+                "to" to friendId,
+                "content" to content,
+                "face" to 573,
+                "clientid" to Client_ID,
+                "msg_id" to MESSAGE_ID++,
+                "psessionid" to psessionid
+        )
 
         val response = postWithRetry(ApiURL.SEND_MESSAGE_TO_FRIEND, r)
         checkSendMsgResult(response)
@@ -293,7 +310,8 @@ class SmartQQClient @JvmOverloads constructor(
             LOGGER.debug("开始获取讨论组列表")
 
             val response = get(ApiURL.GET_DISCUSS_LIST, psessionid, vfwebqq)
-            return JSON.parseArray(getJsonObjectResult(response).getJSONArray("dnamelist").toJSONString(), Discuss::class.java)
+            return Gson().fromJson(getJsonObjectResult(response)?.getAsJsonArrayOrNull("dnamelist")
+                    ?: throw IllegalStateException("fail to get discuss list"))
         }
 
     /**
@@ -307,32 +325,27 @@ class SmartQQClient @JvmOverloads constructor(
         get() {
             LOGGER.debug("开始获取好友列表")
 
-            val r = JSONObject()
-            r.put("vfwebqq", vfwebqq)
-            r.put("hash", hash())
-
+            val r = jsonObjectOf(
+                    "vfwebqq" to vfwebqq,
+                    "hash" to hash()
+            )
             val response = post(ApiURL.GET_FRIEND_LIST, r)
             val result = getJsonObjectResult(response)
             val friendMap = parseFriendMap(result)
-            val categories = result.getJSONArray("categories")
             val categoryMap = HashMap<Int, Category>()
             categoryMap.put(0, Category.defaultCategory())
-            run {
-                var i = 0
-                while (categories != null && i < categories.size) {
-                    val category = categories.getObject(i, Category::class.java)
-                    categoryMap.put(category.index, category)
-                    i++
-                }
-            }
-            val friends = result.getJSONArray("friends")
-            var i = 0
-            while (friends != null && i < friends.size) {
-                val item = friends.getJSONObject(i)
-                val friend = friendMap[item.getLongValue("uin")]
-                categoryMap[item.getIntValue("categories")]!!.addFriend(friend!!)
-                i++
-            }
+            result?.getAsJsonArrayOrNull("categories")
+                    ?.map { it.castTo<Category>() }
+                    ?.forEach { categoryMap.put(it.index, it) }
+            result?.getAsJsonArrayOrNull("friends")
+                    ?.forEach {
+                        it as JsonObject
+
+                        val friend = friendMap[it["uin"].asLong]
+                        if (friend != null) {
+                            categoryMap[it["categories"].asInt]?.addFriend(friend)
+                        }
+                    }
             return ArrayList(categoryMap.values)
         }
 
@@ -345,12 +358,14 @@ class SmartQQClient @JvmOverloads constructor(
         get() {
             LOGGER.debug("开始获取好友列表")
 
-            val r = JSONObject()
-            r.put("vfwebqq", vfwebqq)
-            r.put("hash", hash())
+            val r = jsonObjectOf(
+                    "vfwebqq" to vfwebqq,
+                    "hash" to hash()
+            )
 
             val response = post(ApiURL.GET_FRIEND_LIST, r)
-            return ArrayList(parseFriendMap(getJsonObjectResult(response)).values)
+            return ArrayList(parseFriendMap(getJsonObjectResult(response) ?:
+                    throw IllegalStateException("fail to get friend list")).values)
         }
 
     /**
@@ -363,7 +378,8 @@ class SmartQQClient @JvmOverloads constructor(
             LOGGER.debug("开始获取登录用户信息")
 
             val response = get(ApiURL.GET_ACCOUNT_INFO)
-            return JSON.parseObject(getJsonObjectResult(response).toJSONString(), UserInfo::class.java)
+            return Gson().fromJson(getJsonObjectResult(response) ?:
+                    throw IllegalStateException("fail to get account info"))
         }
 
     /**
@@ -375,7 +391,8 @@ class SmartQQClient @JvmOverloads constructor(
         LOGGER.debug("开始获取好友信息")
 
         val response = get(ApiURL.GET_FRIEND_INFO, friendId, vfwebqq, psessionid)
-        return JSON.parseObject(getJsonObjectResult(response).toJSONString(), UserInfo::class.java)
+        return Gson().fromJson(getJsonObjectResult(response) ?:
+                throw IllegalStateException("fail to get friend info"))
     }
 
     /**
@@ -387,13 +404,15 @@ class SmartQQClient @JvmOverloads constructor(
         get() {
             LOGGER.debug("开始获取最近会话列表")
 
-            val r = JSONObject()
-            r.put("vfwebqq", vfwebqq)
-            r.put("clientid", Client_ID)
-            r.put("psessionid", "")
+            val r = jsonObjectOf(
+                    "vfwebqq" to vfwebqq,
+                    "clientid" to Client_ID,
+                    "psessionid" to ""
+            )
 
             val response = post(ApiURL.GET_RECENT_LIST, r)
-            return JSON.parseArray(getJsonArrayResult(response)!!.toJSONString(), Recent::class.java)
+            return Gson().fromJson(getJsonArrayResult(response) ?:
+                    throw IllegalStateException("recent list is null"))
         }
 
     /**
@@ -406,7 +425,8 @@ class SmartQQClient @JvmOverloads constructor(
             LOGGER.debug("开始获取好友状态")
 
             val response = get(ApiURL.GET_FRIEND_STATUS, vfwebqq, psessionid)
-            return JSON.parseArray(getJsonArrayResult(response)!!.toJSONString(), FriendStatus::class.java)
+            return Gson().fromJson(getJsonArrayResult(response)
+                    ?: throw IllegalStateException("fail to get friend status"))
         }
 
     /**
@@ -421,48 +441,38 @@ class SmartQQClient @JvmOverloads constructor(
 
         val response = get(ApiURL.GET_GROUP_INFO, groupCode, vfwebqq)
         val result = getJsonObjectResult(response)
-        val groupInfo = result.getObject("ginfo", GroupInfo::class.java)
+        val groupInfo: GroupInfo = result?.getObject("ginfo") ?:
+                throw IllegalStateException("fail to get group status")
         //获得群成员信息
         val groupUserMap = HashMap<Long, GroupUser>()
-        val minfo = result.getJSONArray("minfo")
-        run {
-            var i = 0
-            while (minfo != null && i < minfo.size) {
-                val groupUser = minfo.getObject(i, GroupUser::class.java)
-                groupUserMap.put(groupUser.userId, groupUser)
-                groupInfo.addUser(groupUser)
-                i++
-            }
-        }
-        val stats = result.getJSONArray("stats")
-        run {
-            var i = 0
-            while (stats != null && i < stats.size) {
-                val item = stats.getJSONObject(i)
-                val groupUser = groupUserMap[item.getLongValue("uin")]
-                groupUser!!.clientType = item.getIntValue("client_type")
-                groupUser.status = item.getIntValue("stat")
-                i++
-            }
-        }
-        val cards = result.getJSONArray("cards")
-        run {
-            var i = 0
-            while (cards != null && i < cards.size) {
-                val item = cards.getJSONObject(i)
-                groupUserMap[item.getLongValue("muin")]!!.card = item.getString("card")
-                i++
-            }
-        }
-        val vipinfo = result.getJSONArray("vipinfo")
-        var i = 0
-        while (vipinfo != null && i < vipinfo.size) {
-            val item = vipinfo.getJSONObject(i)
-            val groupUser = groupUserMap[item.getLongValue("u")]!!
-            groupUser.isVip = item.getIntValue("is_vip") == 1
-            groupUser.vipLevel = item.getIntValue("vip_level")
-            i++
-        }
+        result.getAsJsonArrayOrNull("minfo")
+                ?.map { it.castTo<GroupUser>() }
+                ?.forEach {
+                    groupUserMap.put(it.userId, it)
+                    groupInfo.addUser(it)
+                }
+        result.getAsJsonArrayOrNull("stats")
+                ?.forEach {
+                    it as JsonObject
+
+                    val groupUser = groupUserMap[it["uin"].asLong]
+                    groupUser?.clientType = it["client_type"].asInt
+                    groupUser?.status = it["stat"].asInt
+                }
+        result.getAsJsonArrayOrNull("cards")
+                ?.forEach {
+                    it as JsonObject
+
+                    groupUserMap[it["muin"].asLong]?.card = it["card"].asString
+                }
+        result.getAsJsonArrayOrNull("vipinfo")
+                ?.forEach {
+                    it as JsonObject
+
+                    val groupUser = groupUserMap[it["u"].asLong]
+                    groupUser?.isVip = it["is_vip"].asInt == 1
+                    groupUser?.vipLevel = it["vip_level"].asInt
+                }
         return groupInfo
     }
 
@@ -478,28 +488,24 @@ class SmartQQClient @JvmOverloads constructor(
 
         val response = get(ApiURL.GET_DISCUSS_INFO, discussId, vfwebqq, psessionid)
         val result = getJsonObjectResult(response)
-        val discussInfo = result.getObject("info", DiscussInfo::class.java)
+        val discussInfo: DiscussInfo = result?.getObject("info") ?:
+                throw IllegalStateException("fail to get discuss info")
         //获得讨论组成员信息
         val discussUserMap = HashMap<Long, DiscussUser>()
-        val minfo = result.getJSONArray("mem_info")
-        run {
-            var i = 0
-            while (minfo != null && i < minfo.size) {
-                val discussUser = minfo.getObject(i, DiscussUser::class.java)
-                discussUserMap.put(discussUser.userId, discussUser)
-                discussInfo.addUser(discussUser)
-                i++
-            }
-        }
-        val stats = result.getJSONArray("mem_status")
-        var i = 0
-        while (stats != null && i < stats.size) {
-            val item = stats.getJSONObject(i)
-            val discussUser = discussUserMap[item.getLongValue("uin")]!!
-            discussUser.clientType = item.getIntValue("client_type")
-            discussUser.status = item.getString("status")
-            i++
-        }
+        result.getAsJsonArrayOrNull("mem_info")
+                ?.map { it.castTo<DiscussUser>() }
+                ?.forEach {
+                    discussUserMap.put(it.userId, it)
+                    discussInfo.addUser(it)
+                }
+        result.getAsJsonArrayOrNull("mem_status")
+                ?.forEach {
+                    it as JsonObject
+
+                    val discussUser = discussUserMap[it["uin"].asLong]
+                    discussUser?.clientType = it["client_type"].asInt
+                    discussUser?.status = it["status"].asString
+                }
         return discussInfo
     }
 
@@ -514,17 +520,15 @@ class SmartQQClient @JvmOverloads constructor(
     }
 
     //发送post请求
-    private fun post(url: ApiURL, r: JSONObject): Response<String> {
-        return session.post(url.url)
-                .addHeader("User-Agent", ApiURL.USER_AGENT)
-                .addHeader("Referer", url.referer!!)
-                .addHeader("Origin", url.origin)
-                .addForm("r", r.toJSONString())
-                .text()
-    }
+    private fun post(url: ApiURL, r: JsonObject) = session.post(url.url)
+            .addHeader("User-Agent", ApiURL.USER_AGENT)
+            .addHeader("Referer", url.referer ?: throw IllegalStateException("post referer is null"))
+            .addHeader("Origin", url.origin)
+            .addForm("r", r.toString())
+            .text()
 
     //发送post请求，失败时重试
-    private fun postWithRetry(url: ApiURL, r: JSONObject): Response<String> {
+    private fun postWithRetry(url: ApiURL, r: JsonObject): Response<String> {
         var times = 0
         var response: Response<String>
         do {
@@ -537,7 +541,6 @@ class SmartQQClient @JvmOverloads constructor(
     //hash加密方法
     private fun hash() = hash(uin, ptwebqq)
 
-    @Throws(IOException::class)
     override fun close() {
         this.pollStarted = false
         this.client.close()
@@ -545,97 +548,90 @@ class SmartQQClient @JvmOverloads constructor(
 
     companion object {
 
-        //日志
-        private val LOGGER = LoggerFactory.getLogger(SmartQQClient::class.java)
-
         //消息id，这个好像可以随便设置，所以设成全局的
-        private var MESSAGE_ID: Long = 43690001
+        @JvmStatic private var MESSAGE_ID: Long = 43690001
 
         //客户端id，固定的
-        private val Client_ID: Long = 53999199
+        @JvmStatic private val Client_ID: Long = 53999199
 
         //消息发送失败重发次数
-        private val RETRY_TIMES: Long = 5
+        @JvmStatic private val RETRY_TIMES: Long = 5
 
         //用于生成ptqrtoken的哈希函数
-        private fun hash33(s: String): Int {
+        @JvmStatic private fun hash33(s: String): Int {
             var e = 0
             val n = s.length
-            var i = 0
-            while (n > i) {
+            for (i in 0 until n) {
                 e += (e shl 5) + s[i].toInt()
-                ++i
             }
-            return 2147483647 and e
+            return Int.MAX_VALUE and e
         }
 
         //将json解析为好友列表
-        private fun parseFriendMap(result: JSONObject): Map<Long, Friend> {
+        @JvmStatic private fun parseFriendMap(result: JsonObject?): Map<Long, Friend> {
             val friendMap = HashMap<Long, Friend>()
-            val info = result.getJSONArray("info")
-            run {
-                var i = 0
-                while (info != null && i < info.size) {
-                    val item = info.getJSONObject(i)
-                    val friend = Friend()
-                    friend.userId = item.getLongValue("uin")
-                    friend.nickname = item.getString("nick")
-                    friendMap.put(friend.userId, friend)
-                    i++
-                }
-            }
-            val marknames = result.getJSONArray("marknames")
-            run {
-                var i = 0
-                while (marknames != null && i < marknames.size) {
-                    val item = marknames.getJSONObject(i)
-                    friendMap[item.getLongValue("uin")]!!.markname = item.getString("markname")
-                    i++
-                }
-            }
-            val vipinfo = result.getJSONArray("vipinfo")
-            var i = 0
-            while (vipinfo != null && i < vipinfo.size) {
-                val item = vipinfo.getJSONObject(i)
-                val friend = friendMap[item.getLongValue("u")]!!
-                friend.isVip = item.getIntValue("is_vip") == 1
-                friend.vipLevel = item.getIntValue("vip_level")
-                i++
-            }
+            result?.getAsJsonArrayOrNull("info")
+                    ?.forEach {
+                        it as JsonObject
+
+                        val friend = Friend()
+                        friend.userId = it["uin"].asLong
+                        friend.nickname = it["nick"].asString
+                        friendMap.put(friend.userId, friend)
+                    }
+            result?.getAsJsonArrayOrNull("marknames")
+                    ?.forEach {
+                        it as JsonObject
+
+                        friendMap[it["uin"].asLong]?.markname = it["markname"].asString
+                    }
+            result?.getAsJsonArrayOrNull("vipinfo")
+                    ?.forEach {
+                        it as JsonObject
+
+                        val friend = friendMap[it["u"].asLong]
+                        friend?.isVip = it["is_vip"].asInt == 1
+                        friend?.vipLevel = it["vip_level"].asInt
+                    }
             return friendMap
         }
 
         //获取返回json的result字段（JSONObject类型）
-        private fun getJsonObjectResult(response: Response<String>) = getResponseJson(response).getJSONObject("result")
+        private fun getJsonObjectResult(response: Response<String>) =
+                getResponseJson(response).getAsJsonObject("result")
 
         //获取返回json的result字段（JSONArray类型）
-        private fun getJsonArrayResult(response: Response<String>) = getResponseJson(response).getJSONArray("result")
+        private fun getJsonArrayResult(response: Response<String>) =
+                getResponseJson(response).getAsJsonArrayOrNull("result")
 
         //检查消息是否发送成功
-        private fun checkSendMsgResult(response: Response<String>) {
+        @JvmStatic private fun checkSendMsgResult(response: Response<String>) {
             if (response.statusCode != 200) {
                 LOGGER.error(String.format("发送失败，Http返回码[%d]", response.statusCode))
             }
-            val json = JSON.parseObject(response.body)
-            val errCode = json.getInteger("errCode")
-            if (errCode != null && errCode == 0) {
+            val json = JsonParser().parseAsJsonObject(response.body)
+            val errCode = json["errCode"].asInt
+            if (errCode == 0) {
                 LOGGER.debug("发送成功")
             } else {
-                LOGGER.error(String.format("发送失败，Api返回码[%d]", json.getInteger("retcode")))
+                LOGGER.error(String.format("发送失败，Api返回码[%d]", json["retcode"].asInt))
             }
         }
 
         //检验Json返回结果
-        private fun getResponseJson(response: Response<String>): JSONObject {
+        @JvmStatic private fun getResponseJson(response: Response<String>): JsonObject {
             if (response.statusCode != 200) {
                 throw RequestException(String.format("请求失败，Http返回码[%d]", response.statusCode))
             }
-            val json = JSON.parseObject(response.body)
-            val retCode = json.getInteger("retcode")
+            val json = JsonParser().parseAsJsonObject(response.body)
+            val retCode = try {
+                json.getAsJsonPrimitive("retcode")?.asInt
+            } catch (_: ClassCastException) {
+                null
+            }
             when (retCode) {
                 null   -> throw RequestException("请求失败，Api返回异常")
-                0      -> {
-                }
+                0      -> run {}
                 103    -> LOGGER.error("请求失败，Api返回码[103]。你需要进入http://w.qq.com，检查是否能正常接收消息。如果可以的话点击[设置]->[退出登录]后查看是否恢复正常")
                 100100 -> LOGGER.debug("请求失败，Api返回码[100100]")
                 else   -> throw RequestException("请求失败，Api返回码[$retCode]")
@@ -644,21 +640,12 @@ class SmartQQClient @JvmOverloads constructor(
         }
 
         //线程暂停
-        private fun sleep(seconds: Long) {
-            try {
-                Thread.sleep(seconds * 1000)
-            } catch (e: InterruptedException) {
-                //忽略InterruptedException
-            }
-
-        }
+        @JvmStatic private fun sleep(seconds: Long) = Thread.sleep(seconds * 1000)
 
         //hash加密方法
         private fun hash(x: Long, K: String): String {
             val N = IntArray(4)
-            for (T in 0 until K.length) {
-                N[T % 4] = N[T % 4] xor K[T].toInt()
-            }
+            (0 until K.length).forEach { T -> N[T % 4] = N[T % 4] xor K[T].toInt() }
             val U = arrayOf("EC", "OK")
             val V = LongArray(4)
             V[0] = x shr 24 and 255 xor U[0][0].toLong()
@@ -666,15 +653,11 @@ class SmartQQClient @JvmOverloads constructor(
             V[2] = x shr 8 and 255 xor U[1][0].toLong()
             V[3] = x and 255 xor U[1][1].toLong()
 
-            val U1 = LongArray(8)
-
-            for (T in 0..7) {
-                U1[T] = if (T % 2 == 0) N[T shr 1].toLong() else V[T shr 1]
-            }
+            val U1 = LongArray(8) { T -> if (T % 2 == 0) N[T shr 1].toLong() else V[T shr 1] }
 
             val N1 = arrayOf("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F")
             var V1 = ""
-            for (aU1 in U1) {
+            U1.forEach { aU1 ->
                 V1 += N1[(aU1 shr 4 and 15).toInt()]
                 V1 += N1[(aU1 and 15).toInt()]
             }

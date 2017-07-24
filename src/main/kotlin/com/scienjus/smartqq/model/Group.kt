@@ -1,6 +1,6 @@
 package com.scienjus.smartqq.model
 
-import com.alibaba.fastjson.annotation.*
+import com.google.gson.annotations.*
 
 /**
  * 群.
@@ -11,14 +11,10 @@ import com.alibaba.fastjson.annotation.*
  * *
  * @date 2015/12/18.
  */
-class Group {
-
-    @JSONField(name = "gid")
-    var groupId: Long = 0
-
-    var name: String = ""
-
-    var flag: Long = 0
-
-    var code: Long = 0
-}
+data class Group(
+        @SerializedName("gid")
+        var groupId: Long = 0,
+        var name: String? = "",
+        var flag: Long = 0,
+        var code: Long = 0
+)

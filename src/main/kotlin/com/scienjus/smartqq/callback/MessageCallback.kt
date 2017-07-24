@@ -16,19 +16,19 @@ interface MessageCallback {
 
      * @param message
      */
-    fun onMessage(message: Message) {}
+    fun onMessage(message: Message) = Unit
 
     /**
      * 收到群消息后的回调
 
      * @param message
      */
-    fun onGroupMessage(message: GroupMessage) {}
+    fun onGroupMessage(message: GroupMessage) = Unit
 
     /**
      * 收到讨论组消息后的回调
 
      * @param message
      */
-    fun onDiscussMessage(message: DiscussMessage) {}
+    fun onDiscussMessage(message: DiscussMessage) = Unit
 }

@@ -1,6 +1,7 @@
 package com.scienjus.smartqq.model
 
-import com.alibaba.fastjson.*
+import com.github.salomonbrys.kotson.*
+import com.google.gson.*
 
 /**
  * 消息.
@@ -11,29 +12,28 @@ import com.alibaba.fastjson.*
  * *
  * @date 15/12/19.
  */
-class Message {
-
-    constructor(json: JSONObject) {
-        val cont = json.getJSONArray("content")
-        this.font = cont.getJSONArray(0).getObject(1, Font::class.java)
-        val size = cont.size
+data class Message(
+        var time: Long = 0L,
+        var content: String? = "",
+        var userId: Long? = 0L,
+        var font: Font? = null
+) {
+    constructor(json: JsonObject) : this() {
+        val cont = json.get("content").asJsonArray
+        this.font = cont.get(0).asJsonArray.getObject(1)
+        val size = cont.size()
         val contentBuilder = StringBuilder()
         for (i in 1 until size) {
-            contentBuilder.append(cont.getString(i))
+            contentBuilder.append(cont.get(i).run {
+                if (this@run is JsonPrimitive && this@run.isString) {
+                    this@run.string
+                } else {
+                    this@run.toString()
+                }
+            })
         }
         this.content = contentBuilder.toString()
-        this.time = json.getLongValue("time")
-        this.userId = json.getLongValue("from_uin")
+        this.time = json.get("time").asLong
+        this.userId = json.get("from_uin").asLong
     }
-
-    constructor()
-
-    var time = 0L
-
-    var content = ""
-
-    var userId = 0L
-
-    var font: Font? = null
-
 }

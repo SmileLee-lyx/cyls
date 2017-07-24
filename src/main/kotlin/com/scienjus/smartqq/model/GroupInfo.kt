@@ -1,6 +1,6 @@
 package com.scienjus.smartqq.model
 
-import com.alibaba.fastjson.annotation.*
+import com.google.gson.annotations.*
 import java.util.*
 
 /**
@@ -12,24 +12,17 @@ import java.util.*
  * *
  * @date 2015/12/24.
  */
-class GroupInfo {
-
-    @JSONField(name = "gid")
-    var groupId = 0L
-
-    var createtime = 0L
-
-    var memo = ""
-
-    var name = ""
-
-    var owner = 0L
-
-    var markname = ""
-
-    var users: MutableList<GroupUser> = ArrayList()
-
+data class GroupInfo(
+        @SerializedName("gid")
+        var groupId: Long = 0L,
+        var createtime: Long = 0L,
+        var memo: String? = "",
+        var name: String? = "",
+        var owner: Long = 0L,
+        var markname: String? = "",
+        var users: MutableList<GroupUser>? = ArrayList()
+) {
     fun addUser(user: GroupUser) {
-        this.users.add(user)
+        this.users?.add(user)
     }
 }

@@ -1,7 +1,6 @@
 package com.scienjus.smartqq.model
 
-import com.alibaba.fastjson.annotation.*
-
+import com.google.gson.annotations.*
 import java.util.*
 
 /**
@@ -13,25 +12,14 @@ import java.util.*
  * *
  * @date 2015/12/24.
  */
-class DiscussInfo {
-
-    @JSONField(name = "did")
-    var discussId: Long = 0
-
-    @JSONField(name = "discu_name")
-    var name: String? = null
-
-    private var users: MutableList<DiscussUser> = ArrayList()
-
+data class DiscussInfo(
+        @SerializedName("did")
+        var discussId: Long = 0,
+        @SerializedName("discu_name")
+        var name: String? = null,
+        var users: MutableList<DiscussUser>? = ArrayList()
+) {
     fun addUser(user: DiscussUser) {
-        this.users.add(user)
-    }
-
-    fun getUsers(): List<DiscussUser> {
-        return users
-    }
-
-    fun setUsers(users: MutableList<DiscussUser>) {
-        this.users = users
+        this.users?.add(user)
     }
 }

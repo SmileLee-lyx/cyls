@@ -9,11 +9,8 @@ package com.scienjus.smartqq.model
  * *
  * @date 2015/12/24.
  */
-class Birthday {
-
-    var year: Int = 0
-
-    var month: Int = 0
-
-    var day: Int = 0
-}
+data class Birthday(
+        var year: Int = 0,
+        var month: Int = 0,
+        var day: Int = 0
+)

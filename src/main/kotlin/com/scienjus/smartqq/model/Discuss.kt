@@ -1,6 +1,6 @@
 package com.scienjus.smartqq.model
 
-import com.alibaba.fastjson.annotation.*
+import com.google.gson.annotations.*
 
 /**
  * 讨论组.
@@ -11,10 +11,8 @@ import com.alibaba.fastjson.annotation.*
  * *
  * @date 2015/12/23.
  */
-class Discuss {
-
-    @JSONField(name = "did")
-    var discussId: Long = 0
-
-    var name: String? = null
-}
+data class Discuss(
+        @SerializedName("did")
+        var discussId: Long = 0,
+        var name: String? = null
+)

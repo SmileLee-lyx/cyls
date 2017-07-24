@@ -9,27 +9,18 @@ package com.scienjus.smartqq.model
  * *
  * @date 15/12/19.
  */
-class Font {
-
-    var style: IntArray? = null
-
-    var color: String? = null
-
-    var name: String? = null
-
-    var size: Int = 0
-
+data class Font(
+        var style: IntArray? = null,
+        var color: String? = null,
+        var name: String? = null,
+        var size: Int = 0
+) {
     companion object {
-
-        val DEFAULT_FONT = defaultFont()
-
-        private fun defaultFont(): Font {
-            val font = Font()
-            font.color = "000000"
-            font.style = intArrayOf(0, 0, 0)
-            font.name = "宋体"
-            font.size = 10
-            return font
-        }
+        val DEFAULT_FONT = Font(
+                intArrayOf(0, 0, 0),
+                "000000",
+                "宋体",
+                10
+        )
     }
 }

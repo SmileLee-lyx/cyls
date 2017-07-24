@@ -112,7 +112,5 @@ class ArrayListHelper<T> : ArrayList<T>() {
     }
 }
 
-inline fun <reified T> arrayOf(elements: ArrayListHelper<T>.() -> Unit): Array<T> {
-    val arrayList = ArrayListHelper<T>().apply(elements)
-    return Array(arrayList.size) { arrayList[it] }
-}
+inline fun <reified T> arrayOf(elements: ArrayListHelper<T>.() -> Unit) =
+        ArrayListHelper<T>().apply(elements).toTypedArray()

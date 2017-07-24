@@ -1,6 +1,6 @@
 package com.scienjus.smartqq.model
 
-import com.alibaba.fastjson.annotation.*
+import com.google.gson.annotations.*
 
 /**
  * 好友状态.
@@ -11,13 +11,9 @@ import com.alibaba.fastjson.annotation.*
  * *
  * @date 2015/12/24.
  */
-class FriendStatus {
-
-    @JSONField(name = "uin")
-    var userId: Long = 0
-
-    var status: String? = null
-
-    @JSONField(name = "client_type")
-    var clientType: Int = 0
-}
+data class FriendStatus(
+        @SerializedName("uin")
+        var userId: Long = 0,
+        var status: String? = null,
+        var client_type: Int = 0
+)
